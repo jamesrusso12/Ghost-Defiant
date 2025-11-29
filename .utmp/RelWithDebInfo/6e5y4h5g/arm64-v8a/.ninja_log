@@ -1,0 +1,19 @@
+# ninja log v5
+1394	1546	7850200624200464	C:/Users/jruss/OneDrive/Desktop/Senior Project/VR-MR-project/VR-MR-Project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/6e5y4h5g/obj/arm64-v8a/libgame.so	e1b1273fedc910cc
+24	1090	7850200619605130	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	8119a360a0b31e74
+32	1099	7850200619635715	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	284db273fe53a6dc
+56	1308	7850200621828312	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	950f9664a5c183f4
+9	1113	7850200619874597	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	882f5d4862a16df1
+1	1160	7850200620338611	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	ff583dafed56eb76
+48	1118	7850200619930236	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	dc0786b95ad03a77
+40	1331	7850200622065161	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	9a092273ac4959e1
+15	1394	7850200622655905	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	bbdeb61f0a1ef226
+39	9275	7856310034113981	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	8119a360a0b31e74
+48	9277	7856310034113981	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	284db273fe53a6dc
+32	9279	7856310034154202	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	882f5d4862a16df1
+57	9287	7856310034244864	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	dc0786b95ad03a77
+13	9304	7856310034407915	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	ff583dafed56eb76
+65	9426	7856310035627153	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	9a092273ac4959e1
+26	9479	7856310036158101	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	bbdeb61f0a1ef226
+72	9597	7856310037337283	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	950f9664a5c183f4
+9597	9889	7856310040263753	C:/Users/jruss/OneDrive/Desktop/Senior Project/VR-MR-project/VR-MR-Project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/6e5y4h5g/obj/arm64-v8a/libgame.so	e1b1273fedc910cc

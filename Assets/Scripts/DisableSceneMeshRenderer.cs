@@ -1,0 +1,111 @@
+using UnityEngine;
+using Meta.XR.BuildingBlocks;
+
+/// <summary>
+/// Disables the MeshRenderer on Scene Mesh Building Block's Mesh Volume Prefab
+/// This makes the scene mesh invisible while keeping the Building Block functional
+/// </summary>
+public class DisableSceneMeshRenderer : MonoBehaviour
+{
+    [Header("Settings")]
+    [Tooltip("Disable the mesh renderer on Scene Mesh prefabs")]
+    public bool disableMeshRenderer = true;
+    
+    [Tooltip("Also disable MeshFilter to completely remove mesh")]
+    public bool disableMeshFilter = false;
+    
+    [Header("Debug")]
+    public bool enableDebugLogs = true;
+    
+    private void Start()
+    {
+        // Find all RoomMeshAnchor objects (created by Scene Mesh Building Block)
+        DisableSceneMeshRenderers();
+        
+        // Also listen for when new meshes are created
+        var roomMeshEvent = FindAnyObjectByType<RoomMeshEvent>();
+        if (roomMeshEvent != null)
+        {
+            roomMeshEvent.OnRoomMeshLoadCompleted.AddListener(OnRoomMeshLoaded);
+        }
+    }
+    
+    private void OnRoomMeshLoaded(UnityEngine.MeshFilter meshFilter)
+    {
+        if (enableDebugLogs)
+            Debug.Log("[DisableSceneMeshRenderer] Room mesh loaded, disabling renderer...");
+        
+        DisableRendererOnObject(meshFilter.gameObject);
+    }
+    
+    private void DisableSceneMeshRenderers()
+    {
+        // Find all RoomMeshAnchor objects in the scene
+        var roomMeshAnchors = FindObjectsByType<RoomMeshAnchor>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        
+        if (enableDebugLogs)
+            Debug.Log($"[DisableSceneMeshRenderer] Found {roomMeshAnchors.Length} RoomMeshAnchor objects");
+        
+        foreach (var anchor in roomMeshAnchors)
+        {
+            DisableRendererOnObject(anchor.gameObject);
+        }
+        
+        // Also check for any objects with "RoomMesh" or "SceneMesh" in the name
+        var allObjects = FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var obj in allObjects)
+        {
+            if (obj.name.Contains("RoomMesh") || obj.name.Contains("SceneMesh") || obj.name.Contains("MeshVolume"))
+            {
+                DisableRendererOnObject(obj);
+            }
+        }
+    }
+    
+    private void DisableRendererOnObject(GameObject obj)
+    {
+        if (obj == null) return;
+        
+        var meshRenderer = obj.GetComponent<MeshRenderer>();
+        if (meshRenderer != null && disableMeshRenderer)
+        {
+            meshRenderer.enabled = false;
+            if (enableDebugLogs)
+                Debug.Log($"[DisableSceneMeshRenderer] Disabled MeshRenderer on {obj.name}");
+        }
+        
+        var meshFilter = obj.GetComponent<MeshFilter>();
+        if (meshFilter != null && disableMeshFilter)
+        {
+            meshFilter.sharedMesh = null;
+            if (enableDebugLogs)
+                Debug.Log($"[DisableSceneMeshRenderer] Cleared MeshFilter on {obj.name}");
+        }
+        
+        // Also check children
+        foreach (Transform child in obj.transform)
+        {
+            DisableRendererOnObject(child.gameObject);
+        }
+    }
+    
+    // Update method to catch meshes that spawn later
+    private void Update()
+    {
+        // Periodically check for new scene meshes (only if we haven't found any yet)
+        // This is a fallback in case meshes spawn after Start()
+        if (Time.frameCount % 60 == 0) // Check every 60 frames (~1 second at 60fps)
+        {
+            var roomMeshAnchors = FindObjectsByType<RoomMeshAnchor>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var anchor in roomMeshAnchors)
+            {
+                var mr = anchor.GetComponent<MeshRenderer>();
+                if (mr != null && mr.enabled)
+                {
+                    DisableRendererOnObject(anchor.gameObject);
+                }
+            }
+        }
+    }
+}
+

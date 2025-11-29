@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 0
+    path: Assets/Scenes/StartScreen.unity
+    guid: ff5549f79dce7e842a60da74b598fb99
+  - enabled: 1
+    path: Assets/Scenes/MainGameScene.unity
+    guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 0
+    path: Assets/Scenes/RayExamples.unity
+    guid: 1b2d3f90c0f50b94cb910c66c773d00d
+  - enabled: 0
+    path: Assets/Samples/Meta MR Utility Kit/72.0.0/Environment Panel Placement (Beta)/EnvironmentPanelPlacement.unity
+    guid: 01a2198db44a25d44a3108875f7fd3d5
+  - enabled: 0
+    path: Assets/Scenes/Destructible Mesh Test.unity
+    guid: daa3598e1299fe448985a1f237174b57
+  m_configObjects:
+    Unity.XR.Oculus.Settings: {fileID: 11400000, guid: cc159ae48ddb07449a98b1a576ee1949,
+      type: 2}
+    com.unity.adaptiveperformance.google.android.provider_settings: {fileID: 11400000,
+      guid: fccf17a70ac39224f90d379fcd23cdd3, type: 2}
+    com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 5008be4787367f04cba7ac6b02f26e87,
+      type: 2}
+    com.unity.adaptiveperformance.samsung.android.provider_settings: {fileID: 11400000,
+      guid: eb68b3a9e04d1e746b30c973933a13ae, type: 2}
+    com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000,
+      guid: 33fbeea32e381c340abce22fc3350438, type: 2}
+    com.unity.input.settings: {fileID: 11400000, guid: 64207b3cde735f94ead489ce6bb2e358,
+      type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 26ab4fe09581fb54aabfb9e8a5345af3,
+      type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 64730621cdb45884d89f0909eb0d804c,
+      type: 2}
+  m_UseUCBPForAssetBundles: 0

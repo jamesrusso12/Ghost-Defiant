@@ -1,0 +1,19 @@
+# ninja log v5
+51	1592	7836553133770179	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	e71ef2b2b612be7b
+63	1655	7836553134363838	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	2bc2b49dcbd26715
+31	1703	7836553134865971	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	257e37e3e2af495
+16	1631	7836553134143772	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	ea619d9d0ee96dd4
+78	1858	7836553136431231	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	2ac3542fa75c5587
+8	1598	7836553133816775	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	70737b07ccb8c3da
+40	1893	7836553136778446	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	83758c8ca282cd9e
+23	1982	7836553137636626	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	8bcbcc8383f0960d
+1982	2183	7836553139693210	C:/Users/jruss/OneDrive/Desktop/Senior Project/VR-MR-project/VR-MR-Project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5q4a386b/obj/arm64-v8a/libgame.so	3c8f57f4ce0bc571
+44	1230	7849404236872647	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	e71ef2b2b612be7b
+10	1235	7849404236921006	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	70737b07ccb8c3da
+26	1255	7849404237117585	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	ea619d9d0ee96dd4
+32	1269	7849404237273656	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	2bc2b49dcbd26715
+20	1299	7849404237569179	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	257e37e3e2af495
+37	1404	7849404238623326	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	83758c8ca282cd9e
+15	1483	7849404239390389	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	8bcbcc8383f0960d
+52	1582	7849404240408508	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	2ac3542fa75c5587
+1582	1739	7849404241986730	C:/Users/jruss/OneDrive/Desktop/Senior Project/VR-MR-project/VR-MR-Project/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5q4a386b/obj/arm64-v8a/libgame.so	3c8f57f4ce0bc571

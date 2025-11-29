@@ -1,0 +1,56 @@
+# Blender MTL File: 'mother spaceship texured.blend'
+# Material Count: 5
+
+newmtl Material.003
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.098968 0.098968 0.098968
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Material.004
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.321574 0.321574 0.321574
+Ks 0.500000 0.500000 0.500000
+Ke 0.104512 0.104512 0.104512
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\NITHEESH\\Downloads\\nndepositphotos_30007547-stock-photo-wavy-yellow-sand-texture-background.jpg
+
+newmtl Material.006
+Ns 47.058824
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.000000 0.001374
+Ks 0.500000 0.500000 0.500000
+Ke 1.600000 0.000000 0.003435
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd D:\\nitheesh\\edited te\\metal tex.png
+
+newmtl Material.008
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd D:\\nitheesh\\IMG_20180618_124829.jpg
+
+newmtl Material.011
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\NITHEESH\\Downloads\\nndepositphotos_30007547-stock-photo-wavy-yellow-sand-texture-background.jpg
