@@ -13,7 +13,6 @@ public class Ghost : MonoBehaviour, IPooledObject
     public float roamInterval = 2f;
     public float detectionRange = 5f;
     public float attackRange = 1.5f;
-    public int damage = 10;
     
     [Header("Hiding Behavior")]
     [Tooltip("Distance at which ghost will try to hide from player")]
@@ -38,8 +37,26 @@ public class Ghost : MonoBehaviour, IPooledObject
     [Header("References")]
     public GameObject player;
     public Transform attackPoint;
+    
+    [Header("Audio")]
+    [Tooltip("Ambient/wandering sound that plays while ghost is roaming")]
+    public AudioClip wanderingSound;
+    [Tooltip("Shocked sound when player makes eye contact")]
+    public AudioClip shockedSound;
+    [Tooltip("Volume for wandering sound (0-1)")]
+    [Range(0f, 1f)]
+    public float wanderingVolume = 0.5f;
+    [Tooltip("Volume for shocked sound (0-1)")]
+    [Range(0f, 1f)]
+    public float shockedVolume = 0.7f;
+    [Tooltip("Minimum time between shocked sounds (prevents spam)")]
+    public float shockedSoundCooldown = 2f;
 
     private NavMeshAgent agent;
+    private AudioSource ambientAudioSource;
+    private AudioSource shockedAudioSource;
+    private float lastShockedSoundTime = 0f;
+    private bool wasWandering = false;
     private float roamTimer = 0f;
     private bool isAttacking = false;
     private bool isDead = false;
@@ -56,6 +73,34 @@ public class Ghost : MonoBehaviour, IPooledObject
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        
+        // Setup audio sources
+        SetupAudioSources();
+    }
+    
+    void SetupAudioSources()
+    {
+        // Create ambient audio source for wandering sound (looping)
+        ambientAudioSource = gameObject.AddComponent<AudioSource>();
+        ambientAudioSource.clip = wanderingSound;
+        ambientAudioSource.volume = wanderingVolume;
+        ambientAudioSource.loop = true;
+        ambientAudioSource.spatialBlend = 1f; // 3D sound
+        ambientAudioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        ambientAudioSource.minDistance = 2f;
+        ambientAudioSource.maxDistance = 15f;
+        ambientAudioSource.playOnAwake = false;
+        
+        // Create shocked audio source (one-shot)
+        shockedAudioSource = gameObject.AddComponent<AudioSource>();
+        shockedAudioSource.clip = shockedSound;
+        shockedAudioSource.volume = shockedVolume;
+        shockedAudioSource.loop = false;
+        shockedAudioSource.spatialBlend = 1f; // 3D sound
+        shockedAudioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        shockedAudioSource.minDistance = 2f;
+        shockedAudioSource.maxDistance = 15f;
+        shockedAudioSource.playOnAwake = false;
     }
 
     void Start()
@@ -194,6 +239,8 @@ public class Ghost : MonoBehaviour, IPooledObject
         // React to being looked at - pause and face player, then run away
         if (playerLookingAtGhost && distanceToPlayer <= hideDistance && distanceToPlayer > attackRange && !isReactingToDetection && !isAttacking)
         {
+            // Play shocked sound when eye contact is made
+            PlayShockedSound();
             StartCoroutine(ReactToDetection());
         }
         // Hiding behavior: continue hiding after reaction
@@ -229,12 +276,27 @@ public class Ghost : MonoBehaviour, IPooledObject
         {
             isHiding = false;
             agent.speed = speed;
+            
+            // Play wandering sound if not already playing
+            if (!wasWandering)
+            {
+                PlayWanderingSound();
+                wasWandering = true;
+            }
+            
             // Normal roaming behavior
             if (agent.remainingDistance <= 0.2f && roamTimer >= roamInterval)
             {
                 PickNewRoamPosition();
                 roamTimer = 0f;
             }
+        }
+        
+        // Stop wandering sound when hiding or attacking
+        if ((isHiding || isAttacking || isReactingToDetection) && wasWandering)
+        {
+            StopWanderingSound();
+            wasWandering = false;
         }
 
         // Smooth follow agent path
@@ -269,6 +331,9 @@ public class Ghost : MonoBehaviour, IPooledObject
         isReactingToDetection = true;
         agent.isStopped = true;
         
+        // Stop wandering sound when detected
+        StopWanderingSound();
+        
         // Face the player
         Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
         directionToPlayer.y = 0; // Keep horizontal
@@ -288,6 +353,37 @@ public class Ghost : MonoBehaviour, IPooledObject
         agent.isStopped = false;
         agent.speed = speed * hideSpeedMultiplier;
         HideFromPlayer();
+    }
+    
+    void PlayWanderingSound()
+    {
+        if (ambientAudioSource != null && wanderingSound != null && !ambientAudioSource.isPlaying)
+        {
+            ambientAudioSource.clip = wanderingSound;
+            ambientAudioSource.volume = wanderingVolume;
+            ambientAudioSource.Play();
+        }
+    }
+    
+    void StopWanderingSound()
+    {
+        if (ambientAudioSource != null && ambientAudioSource.isPlaying)
+        {
+            ambientAudioSource.Stop();
+        }
+    }
+    
+    void PlayShockedSound()
+    {
+        // Prevent spam of shocked sounds
+        if (Time.time - lastShockedSoundTime < shockedSoundCooldown)
+            return;
+            
+        if (shockedAudioSource != null && shockedSound != null)
+        {
+            shockedAudioSource.PlayOneShot(shockedSound, shockedVolume);
+            lastShockedSoundTime = Time.time;
+        }
     }
     
     void HideFromPlayer()
@@ -493,6 +589,9 @@ public class Ghost : MonoBehaviour, IPooledObject
     {
         isAttacking = true;
         agent.isStopped = true;
+        
+        // Stop wandering sound when attacking
+        StopWanderingSound();
 
         // Face player before attacking
         Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
@@ -516,12 +615,8 @@ public class Ghost : MonoBehaviour, IPooledObject
         // Wait for attack animation
         yield return new WaitForSeconds(0.5f);
 
-        // Deal damage to player
-        PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
-        if (playerHealth != null)
-        {
-            playerHealth.TakeDamage(damage);
-        }
+        // Attack complete - visual/audio feedback only (no health system)
+        // Ghosts attack for immersion but don't damage player
 
         // After attack, be more lively - dart away or circle
         yield return new WaitForSeconds(0.3f);
@@ -546,6 +641,13 @@ public class Ghost : MonoBehaviour, IPooledObject
         
         isDead = true;
         if (agent != null) agent.enabled = false;
+        
+        // Stop all audio when ghost dies
+        StopWanderingSound();
+        if (shockedAudioSource != null && shockedAudioSource.isPlaying)
+        {
+            shockedAudioSource.Stop();
+        }
 
         if (animator != null)
             animator.SetTrigger("Death");
@@ -582,6 +684,15 @@ public class Ghost : MonoBehaviour, IPooledObject
         isReactingToDetection = false;
         roamTimer = 0f;
         lastLivelyActionTime = 0f;
+        wasWandering = false;
+        lastShockedSoundTime = 0f;
+        
+        // Stop any audio that might be playing
+        StopWanderingSound();
+        if (shockedAudioSource != null && shockedAudioSource.isPlaying)
+        {
+            shockedAudioSource.Stop();
+        }
         
         if (agent != null)
         {

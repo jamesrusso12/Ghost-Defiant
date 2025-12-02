@@ -1,0 +1,2 @@
+C:\Users\jruss\OneDrive\Desktop\Senior Project\VR-MR-Project\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\CMakeLists.txt
+C:\Users\jruss\OneDrive\Desktop\Senior Project\VR-MR-Project\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\CMakeLists.txt
