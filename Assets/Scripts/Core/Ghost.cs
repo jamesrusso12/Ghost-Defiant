@@ -12,19 +12,30 @@ public class Ghost : MonoBehaviour, IPooledObject
     public float roamRadius = 5f;
     public float roamInterval = 2f;
     public float detectionRange = 5f;
-    public float attackRange = 1.5f;
+    
+    [Header("Room Exploration")]
+    [Tooltip("How much ghosts prefer to explore furniture/objects (0-1, higher = more curious)")]
+    [Range(0f, 1f)]
+    public float explorationCuriosity = 0.7f;
+    [Tooltip("Minimum time to spend near an object of interest")]
+    public float minExploreTime = 2f;
+    [Tooltip("Maximum time to spend near an object of interest")]
+    public float maxExploreTime = 5f;
     
     [Header("Hiding Behavior")]
     [Tooltip("Distance at which ghost will try to hide from player")]
     public float hideDistance = 8f;
     [Tooltip("Field of view angle (degrees) - ghost hides if player is looking at it within this angle")]
-    public float playerFOVAngle = 60f;
+    public float playerFOVAngle = 45f;
     [Tooltip("Speed multiplier when hiding")]
     public float hideSpeedMultiplier = 2f;
     [Tooltip("Minimum distance to maintain from player when hiding")]
     public float minHideDistance = 4f;
-    [Tooltip("How long ghost pauses when detected (seconds)")]
-    public float detectionPauseTime = 0.5f;
+    [Tooltip("How long ghost pauses when detected (seconds) - random between min and max")]
+    public float detectionPauseTimeMin = 2f;
+    public float detectionPauseTimeMax = 5f;
+    [Tooltip("Layer mask for line-of-sight detection")]
+    public LayerMask lineOfSightMask = -1;
     
     [Header("Lively Behavior")]
     [Tooltip("When near player, ghost will circle around at this radius")]
@@ -43,6 +54,10 @@ public class Ghost : MonoBehaviour, IPooledObject
     public AudioClip wanderingSound;
     [Tooltip("Shocked sound when player makes eye contact")]
     public AudioClip shockedSound;
+    [Tooltip("Idle ambient sound")]
+    public AudioClip idleSound;
+    [Tooltip("Moving/wandering sound")]
+    public AudioClip movingSound;
     [Tooltip("Volume for wandering sound (0-1)")]
     [Range(0f, 1f)]
     public float wanderingVolume = 0.5f;
@@ -58,7 +73,6 @@ public class Ghost : MonoBehaviour, IPooledObject
     private float lastShockedSoundTime = 0f;
     private bool wasWandering = false;
     private float roamTimer = 0f;
-    private bool isAttacking = false;
     private bool isDead = false;
     private bool isHiding = false;
     private bool isReactingToDetection = false;
@@ -69,6 +83,10 @@ public class Ghost : MonoBehaviour, IPooledObject
     private List<MRUKAnchor> obstacleAnchors;
     private float lastLivelyActionTime = 0f;
     private Vector3 circleTargetPosition;
+    private MRUKAnchor currentExplorationTarget;
+    private float explorationTimer = 0f;
+    private bool isExploring = false;
+    private string currentAnimationState = "Idle";
 
     void Awake()
     {
@@ -237,14 +255,14 @@ public class Ghost : MonoBehaviour, IPooledObject
         bool playerLookingAtGhost = IsPlayerLookingAtGhost();
         
         // React to being looked at - pause and face player, then run away
-        if (playerLookingAtGhost && distanceToPlayer <= hideDistance && distanceToPlayer > attackRange && !isReactingToDetection && !isAttacking)
+        if (playerLookingAtGhost && distanceToPlayer <= hideDistance && !isReactingToDetection)
         {
             // Play shocked sound when eye contact is made
             PlayShockedSound();
             StartCoroutine(ReactToDetection());
         }
         // Hiding behavior: continue hiding after reaction
-        else if (isHiding && distanceToPlayer > attackRange)
+        else if (isHiding)
         {
             agent.speed = speed * hideSpeedMultiplier;
             // Continue hiding if still being looked at
@@ -258,15 +276,8 @@ public class Ghost : MonoBehaviour, IPooledObject
                 isHiding = false;
             }
         }
-        // Attack behavior when very close
-        else if (distanceToPlayer <= attackRange && !isAttacking && !isReactingToDetection)
-        {
-            isHiding = false;
-            agent.speed = speed;
-            StartCoroutine(AttackPlayer());
-        }
-        // Lively behavior when near player but not attacking
-        else if (distanceToPlayer <= detectionRange && distanceToPlayer > attackRange && !isHiding && !isAttacking && !isReactingToDetection)
+        // Lively behavior when near player
+        else if (distanceToPlayer <= detectionRange && !isHiding && !isReactingToDetection)
         {
             agent.speed = speed * livelySpeedMultiplier;
             PerformLivelyBehavior();
@@ -284,16 +295,49 @@ public class Ghost : MonoBehaviour, IPooledObject
                 wasWandering = true;
             }
             
-            // Normal roaming behavior
-            if (agent.remainingDistance <= 0.2f && roamTimer >= roamInterval)
+            // Handle exploration behavior
+            if (isExploring)
             {
-                PickNewRoamPosition();
-                roamTimer = 0f;
+                explorationTimer -= Time.deltaTime;
+                
+                // Stay near the exploration target
+                if (agent.remainingDistance <= 0.5f && explorationTimer > 0)
+                {
+                    // Occasionally move slightly around the object
+                    if (Random.value < 0.1f * Time.deltaTime)
+                    {
+                        Vector3 offset = Random.insideUnitSphere * 1f;
+                        offset.y = 0;
+                        Vector3 newPos = currentExplorationTarget.transform.position + offset;
+                        
+                        NavMeshHit hit;
+                        if (NavMesh.SamplePosition(newPos, out hit, 2f, NavMesh.AllAreas))
+                        {
+                            agent.SetDestination(hit.position);
+                        }
+                    }
+                }
+                else if (explorationTimer <= 0)
+                {
+                    // Done exploring, pick new destination
+                    isExploring = false;
+                    PickNewRoamPosition();
+                    roamTimer = 0f;
+                }
+            }
+            else
+            {
+                // Normal roaming behavior
+                if (agent.remainingDistance <= 0.2f && roamTimer >= roamInterval)
+                {
+                    PickNewRoamPosition();
+                    roamTimer = 0f;
+                }
             }
         }
         
-        // Stop wandering sound when hiding or attacking
-        if ((isHiding || isAttacking || isReactingToDetection) && wasWandering)
+        // Stop wandering sound when hiding or reacting
+        if ((isHiding || isReactingToDetection) && wasWandering)
         {
             StopWanderingSound();
             wasWandering = false;
@@ -309,6 +353,43 @@ public class Ghost : MonoBehaviour, IPooledObject
             Quaternion targetRotation = Quaternion.LookRotation(agent.desiredVelocity.normalized);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 5f);
         }
+        
+        // Update animation state based on movement
+        UpdateAnimationState();
+    }
+    
+    void UpdateAnimationState()
+    {
+        if (animator == null) return;
+        
+        // Determine current state
+        string newState = "Idle";
+        
+        if (isReactingToDetection)
+        {
+            // Shocked animation is handled separately via trigger
+            return;
+        }
+        else if (agent.velocity.sqrMagnitude > 0.1f)
+        {
+            newState = "Moving";
+        }
+        else
+        {
+            newState = "Idle";
+        }
+        
+        // Only update if state changed
+        if (newState != currentAnimationState)
+        {
+            currentAnimationState = newState;
+            
+            if (animator != null)
+            {
+                animator.SetBool("IsMoving", newState == "Moving");
+                animator.SetBool("IsIdle", newState == "Idle");
+            }
+        }
     }
     
     bool IsPlayerLookingAtGhost()
@@ -323,7 +404,24 @@ public class Ghost : MonoBehaviour, IPooledObject
         float angle = Vector3.Angle(playerForward, directionToGhost);
         
         // Check if ghost is within player's field of view
-        return angle <= playerFOVAngle * 0.5f;
+        if (angle > playerFOVAngle * 0.5f)
+            return false;
+        
+        // Perform raycast to check for direct line of sight
+        float distanceToGhost = Vector3.Distance(playerCamera.transform.position, transform.position);
+        RaycastHit hit;
+        
+        // Raycast from player camera to ghost
+        if (Physics.Raycast(playerCamera.transform.position, directionToGhost, out hit, distanceToGhost, lineOfSightMask))
+        {
+            // Check if the raycast hit the ghost
+            if (hit.collider.gameObject == gameObject || hit.collider.transform.IsChildOf(transform))
+            {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     IEnumerator ReactToDetection()
@@ -334,13 +432,22 @@ public class Ghost : MonoBehaviour, IPooledObject
         // Stop wandering sound when detected
         StopWanderingSound();
         
+        // Play shocked animation if available
+        if (animator != null)
+        {
+            animator.SetTrigger("Shocked");
+        }
+        
         // Face the player
         Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
         directionToPlayer.y = 0; // Keep horizontal
         Quaternion lookAtPlayer = Quaternion.LookRotation(directionToPlayer);
         
+        // Random pause time between min and max
+        float pauseDuration = Random.Range(detectionPauseTimeMin, detectionPauseTimeMax);
         float pauseTimer = 0f;
-        while (pauseTimer < detectionPauseTime)
+        
+        while (pauseTimer < pauseDuration)
         {
             transform.rotation = Quaternion.Slerp(transform.rotation, lookAtPlayer, Time.deltaTime * 8f);
             pauseTimer += Time.deltaTime;
@@ -585,55 +692,6 @@ public class Ghost : MonoBehaviour, IPooledObject
     }
 
 
-    private IEnumerator AttackPlayer()
-    {
-        isAttacking = true;
-        agent.isStopped = true;
-        
-        // Stop wandering sound when attacking
-        StopWanderingSound();
-
-        // Face player before attacking
-        Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
-        directionToPlayer.y = 0;
-        Quaternion lookAtPlayer = Quaternion.LookRotation(directionToPlayer);
-        
-        float faceTimer = 0f;
-        while (faceTimer < 0.3f)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookAtPlayer, Time.deltaTime * 6f);
-            faceTimer += Time.deltaTime;
-            yield return null;
-        }
-
-        // Play attack animation
-        if (animator != null)
-        {
-            animator.SetTrigger("Attack");
-        }
-
-        // Wait for attack animation
-        yield return new WaitForSeconds(0.5f);
-
-        // Attack complete - visual/audio feedback only (no health system)
-        // Ghosts attack for immersion but don't damage player
-
-        // After attack, be more lively - dart away or circle
-        yield return new WaitForSeconds(0.3f);
-        
-        isAttacking = false;
-        agent.isStopped = false;
-        
-        // Quick reposition after attack to be more dynamic
-        if (Random.value > 0.5f)
-        {
-            DartToSide();
-        }
-        else
-        {
-            QuickReposition();
-        }
-    }
 
     public void Kill()
     {
@@ -679,7 +737,6 @@ public class Ghost : MonoBehaviour, IPooledObject
     {
         // Reset ghost state when spawned from pool
         isDead = false;
-        isAttacking = false;
         isHiding = false;
         isReactingToDetection = false;
         roamTimer = 0f;

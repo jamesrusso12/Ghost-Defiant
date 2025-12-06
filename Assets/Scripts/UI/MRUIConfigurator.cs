@@ -20,7 +20,7 @@ public class MRUIConfigurator : MonoBehaviour
     public float worldSpaceScale = 0.01f;
 
     [Tooltip("Distance from camera for World Space UI")]
-    public float uiDistanceFromCamera = 2f;
+    public float uiDistanceFromCamera = 0.8f;
 
     [Tooltip("Continuously enforce correct layer configuration (fixes Unity auto-sync issues)")]
     public bool continuouslyEnforceLayers = true;
@@ -140,6 +140,30 @@ public class MRUIConfigurator : MonoBehaviour
 
                 // Ensure proper sorting
                 canvas.sortingOrder = 100; // High sorting order to appear on top
+                
+                // CRITICAL: Set render queue to render ABOVE passthrough walls
+                // UI should render after everything else (including passthrough geometry)
+                // This prevents UI from being occluded by real-world walls
+                CanvasRenderer[] allRenderers = canvas.GetComponentsInChildren<CanvasRenderer>(true);
+                foreach (CanvasRenderer renderer in allRenderers)
+                {
+                    if (renderer != null)
+                    {
+                        renderer.cullTransparentMesh = false; // Ensure UI is always visible
+                        
+                        // Set high render queue for UI materials to render above passthrough
+                        Material mat = renderer.GetMaterial();
+                        if (mat != null)
+                        {
+                            // Passthrough geometry renders at ~2000-3000, UI should render after
+                            // Render queue 4000+ ensures UI renders on top
+                            if (mat.renderQueue < 4000)
+                            {
+                                mat.renderQueue = 4000;
+                            }
+                        }
+                    }
+                }
             }
             else if (preferredRenderMode == RenderMode.ScreenSpaceOverlay)
             {

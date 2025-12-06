@@ -65,10 +65,12 @@
     <Compile Include="Assets\Scripts\Unused\ControllerDebug.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\EnvMapAnimator.cs" />
     <Compile Include="Assets\Scripts\MR_XR\VirtualEnvironmentPositioner.cs" />
+    <Compile Include="Assets\Scripts\UI\SettingsMenu.cs" />
     <Compile Include="Assets\Scripts\Unused\Billboard.cs" />
     <Compile Include="Assets\Scripts\Debug\DebugConsole.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_A.cs" />
     <Compile Include="Assets\Scripts\Systems\PerformanceMonitor.cs" />
+    <Compile Include="Assets\Scripts\Systems\PauseManager.cs" />
     <Compile Include="Assets\Scripts\Debug\OnScreenDebugDisplay.cs" />
     <Compile Include="Assets\Scripts\UI\MRUIConfigurator.cs" />
     <Compile Include="Assets\Scripts\Unused\StartMenuPanelPlacement.cs" />
@@ -99,6 +101,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ShaderPropAnimator.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaSDKFix.cs" />
     <Compile Include="Assets\Scripts\Core\GhostSpawner.cs" />
+    <Compile Include="Assets\Scripts\UI\WristMenu.cs" />
     <Compile Include="Assets\Scripts\MR_XR\SimpleRoomOccluder.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaXRProjectFixer.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextInfoDebugTool.cs" />
@@ -106,6 +109,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexShakeA.cs" />
     <Compile Include="Assets\Scripts\UI\FadeScreen.cs" />
     <Compile Include="Assets\Scripts\Systems\RuntimeMeshHider.cs" />
+    <Compile Include="Assets\Scripts\UI\SimpleWristMenu.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark01_UGUI.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\SimpleScript.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark04.cs" />
@@ -128,6 +132,7 @@
     <Compile Include="Assets\Scripts\MR_XR\XRConfigurationManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\DropdownSample.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexColorCycler.cs" />
+    <Compile Include="Assets\Scripts\Core\GhostTrail.cs" />
     <Compile Include="Assets\Scripts\Unused\SimpleCursor.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaSDKMaterialFixer.cs" />
     <Compile Include="Assets\Scripts\Unused\ProjectCleanup.cs" />
@@ -146,6 +151,7 @@
     <Compile Include="Assets\Scripts\Unused\BillboardMenu.cs" />
     <Compile Include="Assets\Scripts\Debug\SSAORemover.cs" />
     <Compile Include="Assets\Scripts\MR_XR\XRSetupManager.cs" />
+    <Compile Include="Assets\Scripts\UI\WristMenuController.cs" />
     <Compile Include="Assets\Scripts\Systems\RuntimeNavmeshBuilder.cs" />
   </ItemGroup>
   <ItemGroup>

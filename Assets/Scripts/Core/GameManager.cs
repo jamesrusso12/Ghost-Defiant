@@ -30,6 +30,7 @@ public class GameManager : MonoBehaviour
     private float timeRemaining;
     private bool roundActive = false;
     private bool isTransitioning = false;
+    private bool isPaused = false;
 
     // Events for better decoupling
     public static event Action<int> OnRoundStarted;
@@ -91,7 +92,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (roundActive)
+        if (roundActive && !isPaused)
         {
             timeRemaining -= Time.deltaTime;
             timerText.text = Mathf.CeilToInt(timeRemaining) + "s";
@@ -101,6 +102,16 @@ public class GameManager : MonoBehaviour
                 EndRound();
             }
         }
+    }
+    
+    public void SetPaused(bool paused)
+    {
+        isPaused = paused;
+    }
+    
+    public bool IsPaused()
+    {
+        return isPaused;
     }
 
     void StartNextRound()
