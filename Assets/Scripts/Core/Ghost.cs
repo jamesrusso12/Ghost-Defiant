@@ -242,17 +242,28 @@ public class Ghost : MonoBehaviour, IPooledObject
         }
     }
 
+    // Performance optimization: Cache player distance check interval
+    private float lastPlayerCheckTime = 0f;
+    private float playerCheckInterval = 0.1f; // Check every 0.1 seconds instead of every frame
+    private float cachedDistanceToPlayer = 0f;
+    private bool cachedPlayerLookingAtGhost = false;
+
     void Update()
     {
         if (agent == null || !agent.isOnNavMesh || !agent.enabled || player == null || isDead) return;
 
         roamTimer += Time.deltaTime;
 
-        // Check if player is in range for attack
-        float distanceToPlayer = Vector3.Distance(transform.position, player.transform.position);
+        // Performance optimization: Only check player distance/looking periodically, not every frame
+        if (Time.time - lastPlayerCheckTime >= playerCheckInterval)
+        {
+            cachedDistanceToPlayer = Vector3.Distance(transform.position, player.transform.position);
+            cachedPlayerLookingAtGhost = IsPlayerLookingAtGhost();
+            lastPlayerCheckTime = Time.time;
+        }
         
-        // Check if player is looking at ghost (for hiding behavior)
-        bool playerLookingAtGhost = IsPlayerLookingAtGhost();
+        float distanceToPlayer = cachedDistanceToPlayer;
+        bool playerLookingAtGhost = cachedPlayerLookingAtGhost;
         
         // React to being looked at - pause and face player, then run away
         if (playerLookingAtGhost && distanceToPlayer <= hideDistance && !isReactingToDetection)
