@@ -55,7 +55,6 @@ MonoBehaviour:
   roamRadius: 3
   roamInterval: 2
   detectionRange: 5
-  attackRange: 1.5
   explorationCuriosity: 0.7
   minExploreTime: 2
   maxExploreTime: 5
@@ -229,7 +228,7 @@ TrailRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1303794907754347782}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -246,8 +245,7 @@ TrailRenderer:
   m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 7ac20ce5f02ec4b4cae76b746a01633a, type: 2}
+  m_Materials: []
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
