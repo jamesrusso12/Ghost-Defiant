@@ -20,9 +20,10 @@ public class GunScript : MonoBehaviour
     [Tooltip("Your Specter Ammo sphere prefab")]
     public GameObject projectilePrefab;
     [Tooltip("Speed of projectile (launch velocity)")]
-    public float projectileSpeed = 20f;
-    [Tooltip("Gravity multiplier (1 = normal gravity, higher = more arc)")]
-    public float gravityMultiplier = 1f;
+    public float projectileSpeed = 25f;
+    [Tooltip("Gravity multiplier (1 = normal gravity, higher = more arc, lower = straighter shots)")]
+    [Range(0f, 2f)]
+    public float gravityMultiplier = 0.3f;
     [Tooltip("If true, wall destruction happens on projectile hit (not instant)")]
     public bool delayWallDestruction = true;
     
@@ -188,8 +189,13 @@ public class GunScript : MonoBehaviour
             return;
         }
 
-        // Instantiate the projectile at shooting point
-        GameObject projectile = Instantiate(projectilePrefab, start, Quaternion.identity);
+        // CRITICAL FIX: Spawn projectile slightly forward to avoid immediate collision with gun/player
+        // This prevents the "impact 1 foot in front" issue caused by instant collision
+        float spawnOffset = 0.3f; // Spawn 30cm in front of shooting point
+        Vector3 spawnPosition = start + direction * spawnOffset;
+        
+        // Instantiate the projectile at the offset position
+        GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.identity);
         
         // Keep on Default layer for visibility
         projectile.layer = LayerMask.NameToLayer("Default");
@@ -207,7 +213,11 @@ public class GunScript : MonoBehaviour
             collider = projectile.AddComponent<SphereCollider>();
             collider.radius = 0.1f; // Adjust based on your sphere size
         }
-        collider.isTrigger = true; // Use trigger so it doesn't physically push objects
+        
+        // CRITICAL FIX: Use NON-TRIGGER collider for reliable wall detection
+        // Trigger colliders don't work with non-convex MeshColliders (Unity limitation)
+        // We'll use collision detection instead of trigger detection
+        collider.isTrigger = false;
         
         // Add Rigidbody for physics-based movement
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
@@ -215,24 +225,35 @@ public class GunScript : MonoBehaviour
         {
             rb = projectile.AddComponent<Rigidbody>();
         }
-        rb.mass = 0.1f;
-        rb.linearDamping = 0f;
-        rb.angularDamping = 0f;
-        rb.useGravity = true;
+        rb.mass = 0.05f; // Lighter = less affected by gravity
+        rb.linearDamping = 0f; // No air resistance
+        rb.angularDamping = 0.5f; // Prevent excessive spinning
         rb.interpolation = RigidbodyInterpolation.Interpolate; // Smooth movement
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // Better collision detection
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // Better collision detection for fast-moving objects
+        
+        // CRITICAL FIX: Configure physics material for no bounce
+        PhysicsMaterial projectilePhysicsMaterial = new PhysicsMaterial("ProjectileMaterial");
+        projectilePhysicsMaterial.bounciness = 0f; // No bounce
+        projectilePhysicsMaterial.dynamicFriction = 0f; // Slide freely
+        projectilePhysicsMaterial.staticFriction = 0f; // Slide freely
+        projectilePhysicsMaterial.frictionCombine = PhysicsMaterialCombine.Minimum;
+        projectilePhysicsMaterial.bounceCombine = PhysicsMaterialCombine.Minimum;
+        collider.material = projectilePhysicsMaterial;
         
         // Apply gravity scale
         rb.useGravity = false; // We'll apply custom gravity in ProjectileController for more control
+        
+        // Set constraints to prevent unwanted rotation
+        rb.constraints = RigidbodyConstraints.None; // Allow all movement for now
         
         // Launch projectile with velocity
         rb.linearVelocity = direction * projectileSpeed;
         
         // Add a component to control the projectile
         ProjectileController controller = projectile.AddComponent<ProjectileController>();
-        controller.Initialize(projectileSpeed, projectileLifetime, gravityMultiplier, rayImpactPrefab, this, enableDebugLogging);
+        controller.Initialize(projectileSpeed, projectileLifetime, gravityMultiplier, rayImpactPrefab, this, enableDebugLogging, gameObject);
         
-        if (enableDebugLogging) Debug.Log($"[GunScript] Created projectile at {start}, Direction: {direction}, Speed: {projectileSpeed}, Gravity: {gravityMultiplier}x");
+        if (enableDebugLogging) Debug.Log($"[GunScript] Created projectile at {spawnPosition} (offset from {start}), Direction: {direction}, Speed: {projectileSpeed}, Gravity: {gravityMultiplier}x");
     }
 
     private void CreateLaserLine(Vector3 start, Vector3 end)
@@ -315,8 +336,10 @@ public class ProjectileController : MonoBehaviour
     private Rigidbody rb;
     private bool hasCollided = false;
     private bool debugLogging = false;
+    private GameObject gunObject;
+    private float collisionIgnoreTime = 0.1f; // Ignore collisions for first 0.1 seconds
 
-    public void Initialize(float projectileSpeed, float projectileLifetime, float gravity, GameObject impactPrefab, GunScript gun, bool enableDebug = false)
+    public void Initialize(float projectileSpeed, float projectileLifetime, float gravity, GameObject impactPrefab, GunScript gun, bool enableDebug = false, GameObject gunGameObject = null)
     {
         speed = projectileSpeed;
         lifetime = projectileLifetime;
@@ -325,9 +348,42 @@ public class ProjectileController : MonoBehaviour
         impactEffectPrefab = impactPrefab;
         gunScript = gun;
         debugLogging = enableDebug;
+        gunObject = gunGameObject;
         initialized = true;
         
         rb = GetComponent<Rigidbody>();
+        
+        // CRITICAL FIX: Ignore collisions with gun and player to prevent immediate collision
+        if (gunObject != null)
+        {
+            // Ignore collisions with the gun itself
+            Collider[] gunColliders = gunObject.GetComponentsInChildren<Collider>();
+            Collider projectileCollider = GetComponent<Collider>();
+            
+            foreach (Collider gunCollider in gunColliders)
+            {
+                if (projectileCollider != null && gunCollider != null)
+                {
+                    Physics.IgnoreCollision(projectileCollider, gunCollider, true);
+                    if (debugLogging) Debug.Log($"[ProjectileController] Ignoring collision with gun collider: {gunCollider.gameObject.name}");
+                }
+            }
+            
+            // Also ignore collisions with player
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                Collider[] playerColliders = player.GetComponentsInChildren<Collider>();
+                foreach (Collider playerCollider in playerColliders)
+                {
+                    if (projectileCollider != null && playerCollider != null)
+                    {
+                        Physics.IgnoreCollision(projectileCollider, playerCollider, true);
+                        if (debugLogging) Debug.Log($"[ProjectileController] Ignoring collision with player collider: {playerCollider.gameObject.name}");
+                    }
+                }
+            }
+        }
     }
 
     void FixedUpdate()
@@ -336,6 +392,35 @@ public class ProjectileController : MonoBehaviour
 
         // Apply custom gravity (allows for adjustable arc)
         rb.AddForce(Physics.gravity * gravityMultiplier, ForceMode.Acceleration);
+        
+        // CRITICAL FIX: Perform a raycast check for ceiling/wall hits
+        // When shooting upward, gravity slows the projectile, making collision detection less reliable
+        // This raycast backup ensures we don't miss ceiling hits
+        if (!hasCollided && rb.linearVelocity.magnitude > 0.5f)
+        {
+            Vector3 direction = rb.linearVelocity.normalized;
+            float rayDistance = rb.linearVelocity.magnitude * Time.fixedDeltaTime * 2.5f; // Look ahead further
+            
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, direction, out hit, rayDistance))
+            {
+                // Check if we're about to hit something valid
+                if (hit.collider != null && !hit.collider.isTrigger)
+                {
+                    // Filter out gun and player
+                    bool isGun = gunObject != null && (hit.collider.transform.IsChildOf(gunObject.transform) || hit.collider.gameObject == gunObject);
+                    bool isPlayer = hit.collider.CompareTag("Player");
+                    
+                    if (!isGun && !isPlayer)
+                    {
+                        // Valid hit - trigger impact
+                        if (debugLogging) Debug.Log($"[ProjectileController] Raycast detected imminent collision with {hit.collider.gameObject.name}, triggering early impact");
+                        HandleImpact(hit.collider.gameObject, hit.point, hit.normal);
+                        return;
+                    }
+                }
+            }
+        }
 
         // Check if exceeded lifetime (fallback safety)
         if (Time.time - spawnTime >= lifetime)
@@ -344,16 +429,70 @@ public class ProjectileController : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter(Collider other)
+    // CRITICAL FIX: Changed from OnTriggerEnter to OnCollisionEnter
+    // This is required because Unity's trigger colliders don't work reliably with non-convex MeshColliders
+    // Non-convex MeshColliders are used by the wall destruction system
+    void OnCollisionEnter(Collision collision)
     {
         if (hasCollided) return; // Prevent multiple collision processing
+        
+        // CRITICAL FIX: Ignore collisions during the initial ignore period
+        float timeSinceSpawn = Time.time - spawnTime;
+        if (timeSinceSpawn < collisionIgnoreTime)
+        {
+            if (debugLogging) Debug.Log($"[ProjectileController] Ignoring collision with {collision.gameObject.name} (too soon after spawn: {timeSinceSpawn}s)");
+            return;
+        }
+        
+        // CRITICAL FIX: Explicitly ignore gun and player collisions as backup
+        if (gunObject != null && (collision.transform.IsChildOf(gunObject.transform) || collision.gameObject == gunObject))
+        {
+            if (debugLogging) Debug.Log($"[ProjectileController] Ignoring collision with gun: {collision.gameObject.name}");
+            return;
+        }
+        
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            if (debugLogging) Debug.Log($"[ProjectileController] Ignoring collision with player: {collision.gameObject.name}");
+            return;
+        }
+        
+        // Get collision point and normal from the collision data
+        Vector3 impactPosition = collision.contacts.Length > 0 ? collision.contacts[0].point : transform.position;
+        Vector3 impactNormal = collision.contacts.Length > 0 ? collision.contacts[0].normal : -rb.linearVelocity.normalized;
+        
+        // Handle the impact
+        HandleImpact(collision.gameObject, impactPosition, impactNormal);
+    }
+    
+    /// <summary>
+    /// Centralized impact handling - called from both OnCollisionEnter and raycast detection
+    /// </summary>
+    private void HandleImpact(GameObject hitObject, Vector3 impactPosition, Vector3 impactNormal)
+    {
+        if (hasCollided) return; // Prevent multiple processing
+        
+        // Check if this is a gun or player (shouldn't happen but safety check)
+        if (gunObject != null && (hitObject.transform.IsChildOf(gunObject.transform) || hitObject == gunObject))
+        {
+            return;
+        }
+        if (hitObject.CompareTag("Player"))
+        {
+            return;
+        }
+        
         hasCollided = true;
         
-        if (debugLogging) Debug.Log($"[ProjectileController] Projectile hit: {other.gameObject.name} on layer {other.gameObject.layer}");
+        // Stop physics immediately to prevent bouncing
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true; // Disable physics
+        }
         
-        // Get collision point and normal
-        Vector3 impactPosition = transform.position;
-        Vector3 impactNormal = -rb.linearVelocity.normalized; // Use velocity direction as normal
+        if (debugLogging) Debug.Log($"[ProjectileController] Projectile hit: {hitObject.name} on layer {hitObject.layer}");
         
         // Create impact effect
         if (impactEffectPrefab != null)
@@ -367,13 +506,13 @@ public class ProjectileController : MonoBehaviour
         // Trigger hit events on GunScript
         if (gunScript != null)
         {
-            gunScript.OnShootAndHit.Invoke(other.gameObject);
+            gunScript.OnShootAndHit.Invoke(hitObject);
             
             // Check for Ghost component
-            Ghost ghost = other.GetComponent<Ghost>();
+            Ghost ghost = hitObject.GetComponent<Ghost>();
             if (ghost == null)
             {
-                ghost = other.GetComponentInParent<Ghost>();
+                ghost = hitObject.GetComponentInParent<Ghost>();
             }
             
             if (ghost != null)
