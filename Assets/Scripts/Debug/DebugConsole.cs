@@ -3,8 +3,9 @@ using UnityEngine;
 
 /// <summary>
 /// On-screen debug console for displaying debug logs in builds.
-/// Press X/A button to toggle visibility, Y/B button to clear logs.
+/// RIGHT CONTROLLER: A button to toggle visibility, B button to clear logs.
 /// Keyboard shortcuts (F1/F2) also work as fallback.
+/// Note: Uses RIGHT controller only to avoid conflict with wrist menu (LEFT controller Y button).
 /// </summary>
 public class DebugConsole : MonoBehaviour
 {
@@ -60,14 +61,14 @@ public class DebugConsole : MonoBehaviour
     
     void Update()
     {
-        // Toggle console with X button (left controller) or A button (right controller)
-        if (OVRInput.GetDown(OVRInput.Button.Three) || OVRInput.GetDown(OVRInput.Button.One))
+        // Toggle console with A button (RIGHT controller only - avoid conflict with wrist menu)
+        if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch))
         {
             isVisible = !isVisible;
         }
         
-        // Clear logs with Y button (left controller) or B button (right controller)
-        if (OVRInput.GetDown(OVRInput.Button.Four) || OVRInput.GetDown(OVRInput.Button.Two))
+        // Clear logs with B button (RIGHT controller only)
+        if (OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch))
         {
             logs.Clear();
         }
@@ -139,7 +140,7 @@ public class DebugConsole : MonoBehaviour
         GUIStyle headerStyle = new GUIStyle(GUI.skin.label);
         headerStyle.fontSize = fontSize + 2;
         headerStyle.fontStyle = FontStyle.Bold;
-        GUI.Label(headerRect, $"Debug Console (X/A: Toggle, Y/B: Clear) - {logs.Count} logs", headerStyle);
+        GUI.Label(headerRect, $"Debug Console (RIGHT: A=Toggle, B=Clear) - {logs.Count} logs", headerStyle);
         
         // Draw scrollable log area
         Rect logAreaRect = new Rect(consoleRect.x + 10, consoleRect.y + 45, consoleRect.width - 20, consoleRect.height - 55);

@@ -20,8 +20,8 @@ public class GameUILazyFollow : MonoBehaviour
     bool m_ZRot = true;
 
     [SerializeField]
-    [Tooltip("Offset from the target position (in front of camera).")]
-    public Vector3 m_TargetOffset = Vector3.forward * 0.8f;
+    [Tooltip("Offset from the target position (in front of camera). REDUCED to prevent wall clipping.")]
+    public Vector3 m_TargetOffset = Vector3.forward * 0.35f;
 
     [SerializeField]
     [Tooltip("Snap to target on enable.")]

@@ -132,9 +132,12 @@
     <Compile Include="Assets\Scripts\MR_XR\PassthroughMeshConfigurator.cs" />
     <Compile Include="Assets\Scripts\MR_XR\XRConfigurationManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\DropdownSample.cs" />
+    <Compile Include="Assets\Scripts\Debug\VRPerformanceMonitor.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexColorCycler.cs" />
     <Compile Include="Assets\Scripts\Core\GhostTrail.cs" />
+    <Compile Include="Assets\Scripts\UI\UIDistanceAdjuster.cs" />
     <Compile Include="Assets\Scripts\Unused\SimpleCursor.cs" />
+    <Compile Include="Assets\Scripts\UI\ControllerHelpOverlay.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaSDKMaterialFixer.cs" />
     <Compile Include="Assets\Scripts\Unused\ProjectCleanup.cs" />
     <Compile Include="Assets\Scripts\Debug\StereoTargetEyeFix.cs" />

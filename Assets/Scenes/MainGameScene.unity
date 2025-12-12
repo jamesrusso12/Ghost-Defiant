@@ -1000,6 +1000,8 @@ GameObject:
   - component: {fileID: 85415227}
   - component: {fileID: 85415226}
   - component: {fileID: 85415230}
+  - component: {fileID: 85415232}
+  - component: {fileID: 85415231}
   m_Layer: 5
   m_Name: GameUI
   m_TagString: Untagged
@@ -1114,6 +1116,45 @@ MonoBehaviour:
   positionLerpSpeed: 5
   rotationLerpSpeed: 50
   smoothTime: 0.3
+--- !u!114 &85415231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 85415224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bbdcc455f2679849844d3885a17c63a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VRPerformanceMonitor
+  showOnStart: 1
+  updateInterval: 0.5
+  fontSize: 20
+  badFPS: 45
+  warningFPS: 60
+  targetFPS: 72
+  goodColor: {r: 0, g: 1, b: 0, a: 1}
+  warningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  badColor: {r: 1, g: 0, b: 0, a: 1}
+  backgroundColor: {r: 0, g: 0, b: 0, a: 0.7}
+--- !u!114 &85415232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 85415224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 962fb0434e9164745bb983ae90919bf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIDistanceAdjuster
+  enableRuntimeAdjustment: 1
+  minDistance: 0.2
+  maxDistance: 1
+  adjustmentSpeed: 0.5
+  showDebugLog: 1
 --- !u!1001 &87352934
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9848,6 +9889,7 @@ MonoBehaviour:
   worldSpaceScale: 0.01
   uiDistanceFromCamera: 2
   continuouslyEnforceLayers: 1
+  canvasSortingOrder: 100
   useLazyFollowForHUD: 1
   attachUIToCamera: 0
   updatePositionEveryFrame: 0
@@ -12014,8 +12056,7 @@ MonoBehaviour:
   linePrefab: {fileID: 5239148507277333376, guid: 5d06f7d3a68714e45a5d73892e089153,
     type: 3}
   lineShowTimer: 0.1
-  rayImpactPrefab: {fileID: 1420482567481980664, guid: 5ac4d34b68c8eb841907ec3181fc97d9,
-    type: 3}
+  rayImpactPrefab: {fileID: 0}
   source: {fileID: 1470560866}
   shootingAudioClip: {fileID: 8300000, guid: 74b09f7d52e082342932dae45fa6b627, type: 3}
   OnShoot:

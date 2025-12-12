@@ -19,11 +19,14 @@ public class MRUIConfigurator : MonoBehaviour
     [Tooltip("Scale for World Space Canvas (adjust based on your scene scale). Use 0.01 for normal VR scale.")]
     public float worldSpaceScale = 0.01f;
 
-    [Tooltip("Distance from camera for World Space UI")]
-    public float uiDistanceFromCamera = 0.8f;
+    [Tooltip("Distance from camera for World Space UI (REDUCED to prevent clipping through walls)")]
+    public float uiDistanceFromCamera = 0.35f;
 
     [Tooltip("Continuously enforce correct layer configuration (fixes Unity auto-sync issues)")]
     public bool continuouslyEnforceLayers = true;
+    
+    [Tooltip("Canvas sorting order (higher = renders on top, prevents wall clipping)")]
+    public int canvasSortingOrder = 100;
 
     [Header("HUD Configuration")]
     [Tooltip("If true, will add GameUILazyFollow component to make UI follow camera smoothly")]
@@ -128,6 +131,12 @@ public class MRUIConfigurator : MonoBehaviour
 
                 // Configure UI to follow camera (HUD behavior)
                 ConfigureHUDBehavior(canvas);
+                
+                // CRITICAL: Set canvas sorting order to render on top of walls/environment
+                // This prevents UI from clipping through walls in MR/Passthrough
+                canvas.sortingOrder = canvasSortingOrder;
+                canvas.overrideSorting = true;
+                // Debug.Log($"[MRUIConfigurator] Set Canvas '{canvas.name}' sorting order to {canvasSortingOrder} (renders on top)");
 
                 // Add Canvas Scaler if not present
                 CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
