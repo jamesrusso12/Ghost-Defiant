@@ -1,9 +1,14 @@
 using UnityEngine;
 using Meta.XR.BuildingBlocks;
 
+// Suppress obsolete warnings for RoomMeshEvent - still functional but deprecated
+// TODO: Migrate to MRUK Effect Mesh building block in future update
+#pragma warning disable CS0618
+
 /// <summary>
 /// Disables the MeshRenderer on Scene Mesh Building Block's Mesh Volume Prefab
 /// This makes the scene mesh invisible while keeping the Building Block functional
+/// NOTE: RoomMeshEvent is deprecated - consider migrating to MRUK Effect Mesh building block
 /// </summary>
 public class DisableSceneMeshRenderer : MonoBehaviour
 {
@@ -108,4 +113,6 @@ public class DisableSceneMeshRenderer : MonoBehaviour
         }
     }
 }
+
+#pragma warning restore CS0618
 

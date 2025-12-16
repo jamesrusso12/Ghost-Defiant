@@ -44,8 +44,12 @@ public class GunScript : MonoBehaviour
     public UnityEvent OnShootAndMiss;
     
     [Header("Debug")]
-    [Tooltip("Enable verbose debug logging (disable for better performance)")]
+    [Tooltip("Enable verbose debug logging (disable for better performance) - KEEP THIS OFF IN BUILDS!")]
     public bool enableDebugLogging = false;
+    
+    [Header("Performance")]
+    [Tooltip("Disable collision checks for first N seconds after spawn to improve performance")]
+    public float projectileIgnoreCollisionTime = 0.1f;
 
     // Update is called once per frame
     void Update()
@@ -251,7 +255,7 @@ public class GunScript : MonoBehaviour
         
         // Add a component to control the projectile
         ProjectileController controller = projectile.AddComponent<ProjectileController>();
-        controller.Initialize(projectileSpeed, projectileLifetime, gravityMultiplier, rayImpactPrefab, this, enableDebugLogging, gameObject);
+        controller.Initialize(projectileSpeed, projectileLifetime, gravityMultiplier, rayImpactPrefab, this, enableDebugLogging, gameObject, projectileIgnoreCollisionTime);
         
         if (enableDebugLogging) Debug.Log($"[GunScript] Created projectile at {spawnPosition} (offset from {start}), Direction: {direction}, Speed: {projectileSpeed}, Gravity: {gravityMultiplier}x");
     }
@@ -337,9 +341,9 @@ public class ProjectileController : MonoBehaviour
     private bool hasCollided = false;
     private bool debugLogging = false;
     private GameObject gunObject;
-    private float collisionIgnoreTime = 0.1f; // Ignore collisions for first 0.1 seconds
+    private float collisionIgnoreTime = 0.1f; // Ignore collisions for first N seconds
 
-    public void Initialize(float projectileSpeed, float projectileLifetime, float gravity, GameObject impactPrefab, GunScript gun, bool enableDebug = false, GameObject gunGameObject = null)
+    public void Initialize(float projectileSpeed, float projectileLifetime, float gravity, GameObject impactPrefab, GunScript gun, bool enableDebug = false, GameObject gunGameObject = null, float ignoreCollisionTime = 0.1f)
     {
         speed = projectileSpeed;
         lifetime = projectileLifetime;
@@ -349,6 +353,7 @@ public class ProjectileController : MonoBehaviour
         gunScript = gun;
         debugLogging = enableDebug;
         gunObject = gunGameObject;
+        collisionIgnoreTime = ignoreCollisionTime;
         initialized = true;
         
         rb = GetComponent<Rigidbody>();

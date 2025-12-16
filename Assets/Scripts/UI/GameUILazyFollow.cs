@@ -4,6 +4,7 @@ using UnityEngine.XR;
 
 /// <summary>
 /// Makes the GameUI Canvas follow the camera with smooth movement.
+/// Includes wall avoidance to prevent UI from clipping through walls.
 /// </summary>
 public class GameUILazyFollow : MonoBehaviour
 {
@@ -20,31 +21,60 @@ public class GameUILazyFollow : MonoBehaviour
     bool m_ZRot = true;
 
     [SerializeField]
-    [Tooltip("Offset from the target position (in front of camera). REDUCED to prevent wall clipping.")]
-    public Vector3 m_TargetOffset = Vector3.forward * 0.35f;
+    [Tooltip("Offset from the target position (in front of camera). REDUCED to 0.25m to prevent clipping.")]
+    public Vector3 m_TargetOffset = Vector3.forward * 0.25f;
 
     [SerializeField]
     [Tooltip("Snap to target on enable.")]
     public bool m_SnapOnEnable = true;
 
+    [Header("Collision Settings")]
+    [SerializeField]
+    [Tooltip("Layers that obstruct the view (walls, scene mesh, etc). Include Default, SceneMesh, and any wall layers.")]
+    public LayerMask collisionMask = ~0; // All layers by default - adjust in inspector to exclude UI/Player
+
+    [SerializeField]
+    [Tooltip("How far to keep the UI from the wall.")]
+    public float wallOffset = 0.1f;
+
     [Tooltip("Whether following is active.")]
     public bool followActive = true;
 
     [Tooltip("How fast the UI moves (Higher = Faster).")]
-    public float positionLerpSpeed = 5.0f; // Increased default for responsiveness
+    public float positionLerpSpeed = 8.0f; // Increased for faster response to avoid wall clipping
 
     [Tooltip("How fast the UI rotates.")]
-    public float rotationLerpSpeed = 5.0f;
+    public float rotationLerpSpeed = 8.0f;
 
     [Tooltip("Smooth time for summoning.")]
-    public float smoothTime = 0.3f;
+    public float smoothTime = 0.2f;
 
     private Vector3 m_TargetLastPos;
     private Vector3 velocity = Vector3.zero;
     private Camera m_Camera;
 
     // improved target position calculation
-    Vector3 targetPosition => m_Target != null ? m_Target.TransformPoint(m_TargetOffset) : transform.position;
+    Vector3 targetPosition
+    {
+        get
+        {
+            if (m_Target == null) return transform.position;
+
+            Vector3 desiredPos = m_Target.TransformPoint(m_TargetOffset);
+
+            // Check for walls between camera and desired position
+            Vector3 dir = desiredPos - m_Target.position;
+            float dist = dir.magnitude;
+
+            if (Physics.Raycast(m_Target.position, dir.normalized, out RaycastHit hit, dist, collisionMask))
+            {
+                // Hit a wall! Place UI slightly in front of the hit point
+                return hit.point - (dir.normalized * wallOffset);
+            }
+
+            return desiredPos;
+        }
+    }
 
     Quaternion targetRotation
     {
@@ -87,6 +117,62 @@ public class GameUILazyFollow : MonoBehaviour
         if (m_Camera == null)
         {
             m_Camera = FindFirstObjectByType<Camera>();
+        }
+        
+        // Ensure canvas is configured to render on top of walls (only if not manually configured)
+        // You can disable this if it interferes with your manual positioning
+        if (GetComponent<Canvas>() != null)
+        {
+            ConfigureCanvasRenderOrder();
+        }
+    }
+    
+    /// <summary>
+    /// Configures the canvas to render on top of walls and scene geometry
+    /// </summary>
+    private void ConfigureCanvasRenderOrder()
+    {
+        Canvas canvas = GetComponent<Canvas>();
+        if (canvas == null) return;
+        
+        // Set high sorting order to render on top
+        canvas.sortingOrder = 100;
+        canvas.overrideSorting = true;
+        
+        // Ensure canvas is in World Space (required for proper depth sorting in VR)
+        if (canvas.renderMode != RenderMode.WorldSpace)
+        {
+            canvas.renderMode = RenderMode.WorldSpace;
+        }
+        
+        // Disable culling on all canvas renderers to ensure visibility
+        CanvasRenderer[] renderers = GetComponentsInChildren<CanvasRenderer>(true);
+        foreach (var renderer in renderers)
+        {
+            if (renderer != null)
+            {
+                renderer.cullTransparentMesh = false;
+            }
+        }
+        
+        // Set all UI elements to UI layer
+        int uiLayer = LayerMask.NameToLayer("UI");
+        if (uiLayer != -1)
+        {
+            SetLayerRecursively(gameObject, uiLayer);
+        }
+    }
+    
+    /// <summary>
+    /// Recursively sets layer for GameObject and all children
+    /// </summary>
+    private void SetLayerRecursively(GameObject obj, int layer)
+    {
+        if (obj == null) return;
+        obj.layer = layer;
+        foreach (Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, layer);
         }
     }
 

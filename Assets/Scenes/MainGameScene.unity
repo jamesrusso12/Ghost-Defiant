@@ -1000,8 +1000,6 @@ GameObject:
   - component: {fileID: 85415227}
   - component: {fileID: 85415226}
   - component: {fileID: 85415230}
-  - component: {fileID: 85415232}
-  - component: {fileID: 85415231}
   m_Layer: 5
   m_Name: GameUI
   m_TagString: Untagged
@@ -1025,7 +1023,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4026532318
 --- !u!114 &85415227
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1080,7 +1078,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 85415224}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.3}
   m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1110,51 +1108,16 @@ MonoBehaviour:
   m_Target: {fileID: 1228803005}
   m_FOV: 0
   m_ZRot: 1
-  m_TargetOffset: {x: 0, y: 0, z: 5}
+  m_TargetOffset: {x: 0, y: 0, z: 0.25}
   m_SnapOnEnable: 1
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  wallOffset: 0.1
   followActive: 1
-  positionLerpSpeed: 5
-  rotationLerpSpeed: 50
-  smoothTime: 0.3
---- !u!114 &85415231
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 85415224}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8bbdcc455f2679849844d3885a17c63a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VRPerformanceMonitor
-  showOnStart: 1
-  updateInterval: 0.5
-  fontSize: 20
-  badFPS: 45
-  warningFPS: 60
-  targetFPS: 72
-  goodColor: {r: 0, g: 1, b: 0, a: 1}
-  warningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  badColor: {r: 1, g: 0, b: 0, a: 1}
-  backgroundColor: {r: 0, g: 0, b: 0, a: 0.7}
---- !u!114 &85415232
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 85415224}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 962fb0434e9164745bb983ae90919bf8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIDistanceAdjuster
-  enableRuntimeAdjustment: 1
-  minDistance: 0.2
-  maxDistance: 1
-  adjustmentSpeed: 0.5
-  showDebugLog: 1
+  positionLerpSpeed: 8
+  rotationLerpSpeed: 8
+  smoothTime: 0.2
 --- !u!1001 &87352934
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4374,8 +4337,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 10.797, y: -175}
-  m_SizeDelta: {x: 300, y: 60}
+  m_AnchoredPosition: {x: 10.797, y: -253.5}
+  m_SizeDelta: {x: 250, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &487862055
 MonoBehaviour:
@@ -4425,8 +4388,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 10
+  m_fontSizeBase: 10
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -4810,7 +4773,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -391.75, y: -175}
+  m_AnchoredPosition: {x: -465, y: -242.6}
   m_SizeDelta: {x: 200, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &580196140
@@ -4861,8 +4824,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 10
+  m_fontSizeBase: 10
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -6501,6 +6464,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SpawnOnStart: 1
   MeshMaterial: {fileID: 2100000, guid: 599b01c5f1d17436c89b88cc04257314, type: 2}
+  BarycentricCoordinatesEnabled: 0
   Colliders: 0
   CutHoles: 0
   castShadows: 1
@@ -7416,8 +7380,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 442.41, y: -175}
-  m_SizeDelta: {x: 300, y: 60}
+  m_AnchoredPosition: {x: 478, y: -242.6}
+  m_SizeDelta: {x: 200, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &949800813
 MonoBehaviour:
@@ -7467,8 +7431,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 10
+  m_fontSizeBase: 10
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -8205,7 +8169,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1048602806
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12069,6 +12033,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   enableDebugLogging: 0
+  projectileIgnoreCollisionTime: 0.1
 --- !u!82 &1470560866
 AudioSource:
   m_ObjectHideFlags: 0
@@ -13320,6 +13285,7 @@ MonoBehaviour:
   ignoreAutoConfiguration: 1
   canvasLayerName: UI
   uiElementsLayerName: UI
+  enableDebugLogging: 0
   menuOffset: {x: 0, y: 0.1, z: 0.2}
   menuRotationOffset: {x: 45, y: 0, z: 0}
   menuScale: 0.0005
@@ -13331,7 +13297,7 @@ MonoBehaviour:
   brightnessSlider: {fileID: 351611161}
   volumeValueText: {fileID: 1722177961}
   brightnessValueText: {fileID: 1625639756}
-  gunGameObject: {fileID: 0}
+  gunGameObject: {fileID: 1470560862}
   disableGunWhenMenuOpen: 1
 --- !u!114 &1550987565
 MonoBehaviour:
@@ -13507,7 +13473,7 @@ MonoBehaviour:
   requestEyeTrackingPermissionOnStartup: 0
   requestScenePermissionOnStartup: 1
   requestRecordAudioPermissionOnStartup: 0
-  requestPassthroughCameraAccessPermissionOnStartup: 0
+  requestPassthroughCameraAccessPermissionOnStartup: 1
   _localDimming: 1
   _trackingOriginType: 1
   usePositionTracking: 1
@@ -14980,6 +14946,7 @@ MonoBehaviour:
     - {fileID: 5618556046422172173, guid: c2bd5595e9fe2493a92d4bc0bb264603, type: 3}
     SceneJsons: []
     LoadSceneOnStartup: 1
+    EnableHighFidelityScene: 0
     SeatWidth: 0.6
     SceneJson: 
     <TrackerConfiguration>k__BackingField:
@@ -21315,6 +21282,54 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1861269154}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1864522282
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1864522284}
+  - component: {fileID: 1864522283}
+  m_Layer: 0
+  m_Name: PerformanceDiagnostic
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1864522283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1864522282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca17e345243c7454684b686d37a8dadc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PerformanceDiagnostics
+  triggerKey: 112
+  checkOnStart: 1
+  gunObject: {fileID: 1470560862}
+  flashlightObject: {fileID: 396601956}
+--- !u!4 &1864522284
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1864522282}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1867871794
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -24081,3 +24096,4 @@ SceneRoots:
   - {fileID: 410873044}
   - {fileID: 1713535258}
   - {fileID: 1105171129}
+  - {fileID: 1864522284}

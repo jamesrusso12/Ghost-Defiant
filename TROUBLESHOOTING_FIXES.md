@@ -1,397 +1,323 @@
-# Troubleshooting Fixes Applied
+# Troubleshooting Fixes - December 12, 2025
 
-## Summary
-This document outlines the fixes applied to resolve three major issues in your VR/MR project.
+## Summary of Issues Fixed
 
-⚠️ **MR/PASSTHROUGH TESTING REQUIRES BUILDING TO DEVICE!**
-- Play mode won't work for passthrough
-- See `TESTING_QUICK_REFERENCE.md` for a printable testing guide
-- Use Quick Build tool: `Tools → Quick Build → Development Build` (Ctrl+Shift+B)
+### ✅ 1. Wrist Menu Not Showing (Y Button)
 
----
+**Problem:** Wrist menu wasn't appearing when pressing Y button on controller.
 
-## ✅ Issue 1: Wrist Menu Not Showing (Y Button Conflict)
+**Root Cause:** Multiple conflicting wrist menu scripts (WristMenuController, SimpleWristMenu, WristMenu.cs).
 
-### Problem
-- Pressing Y button on left controller did not toggle the wrist menu
-- Both `DebugConsole` and `WristMenuController` were listening to the same button input
+**Solution:**
+- **Consolidated to WristMenuController** - This is the ONLY wrist menu script you should use
+- Moved `SimpleWristMenu.cs` and `WristMenu.cs` to `Unused/` folder
+- Added `enableDebugLogging` flag (set to FALSE by default for better performance)
+- WristMenuController uses `Button.Two` on `LTouch` controller which is correct for Y button
 
-### Root Cause
-`DebugConsole.cs` was using `OVRInput.Button.Three` on **both** left and right controllers, conflicting with the wrist menu which also uses Y button (Button.Three) on the **left** controller.
-
-### Solution Applied
-Changed `DebugConsole.cs` to use **RIGHT controller only**:
-- **A button (right controller)**: Toggle debug console
-- **B button (right controller)**: Clear logs
-- This frees up the left controller Y button exclusively for the wrist menu
-
-### Files Modified
-- `Assets/Scripts/Debug/DebugConsole.cs`
-
-### Testing (BUILD REQUIRED - Passthrough only works on device!)
-1. Build to Quest headset
-2. Press **Y button on LEFT controller** → Should toggle wrist menu
-3. Press **A button on RIGHT controller** → Should toggle debug console
-4. Check debug console for "[WristMenu]" messages to confirm it's working
-5. No more conflicts!
+**How to Use:**
+1. In Unity, attach `WristMenuController` to your wrist menu Canvas
+2. Assign the `menuPanel` GameObject in the inspector
+3. Press **Y button on LEFT controller** to toggle the menu
+4. Set `enableDebugLogging = true` only when debugging, keep it FALSE in builds
 
 ---
 
-## ✅ Issue 2: Performance Issues / Low FPS
+### ✅ 2. Game UI Clipping Through Walls
 
-### Problem
-- Low FPS during gameplay
-- Suspected cause: Imported 3D models (gun and flashlight from Meshy AI)
+**Problem:** Game UI was constantly clipping through walls and becoming invisible.
 
-### Root Cause
-AI-generated 3D models often have:
-- High polygon counts (50,000+ vertices)
-- Unoptimized import settings
-- Read/Write enabled (doubles memory usage)
-- No mesh compression
+**Root Causes:**
+1. UI was too far from camera (0.5m) - more likely to clip through walls
+2. Collision mask was only checking Default layer (layer 1) - didn't include scene mesh/walls
+3. UI wasn't rendering on top of passthrough walls
+4. UI response was too slow to avoid walls
 
-### Solutions Applied
+**Solutions:**
+- **Reduced UI distance** from 0.5m to **0.25m** (much closer to camera)
+- **Changed collision mask** from `1` to `~0` (all layers) - adjust in inspector to exclude UI/Player
+- **Increased wall offset** from 0.05m to 0.1m for better clearance
+- **Added canvas render order configuration** - sets sorting order to 100 and disables culling
+- **Increased lerp speed** from 5.0 to 8.0 for faster wall avoidance
+- **Auto-sets UI layer** to proper "UI" layer
+- **Increased smoothing speed** from 0.3s to 0.2s for faster response
 
-#### A. Created Model Optimization Tool
-**New Editor Tool**: `Assets/Scripts/Editor/ModelOptimizationChecker.cs`
-
-**How to Use**:
-1. In Unity: **Tools → VR Optimization → Check Model Performance**
-2. Click **"Scan Weapons Folder Only"** to analyze gun and flashlight models
-3. Review the report for issues:
-   - High vertex counts
-   - Missing compression
-   - Read/Write enabled
-   - Unused features (blend shapes, animations)
-4. Click **"Auto-Optimize"** on any model with issues
-5. Re-scan to verify improvements
-
-**What Auto-Optimize Does**:
-- ✓ Enables HIGH mesh compression
-- ✓ Disables Read/Write (saves 50% memory)
-- ✓ Optimizes vertices and polygons
-- ✓ Disables unused features (animations, blend shapes)
-- ✓ Improves normal import
-
-#### B. Created VR Performance Monitor
-**New Runtime Tool**: `Assets/Scripts/Debug/VRPerformanceMonitor.cs`
-
-**How to Use**:
-1. Add `VRPerformanceMonitor` component to any GameObject in your scene
-2. During gameplay, see real-time FPS display in top-left corner
-3. **LEFT controller grip button**: Toggle display on/off
-4. **LEFT controller thumbstick press**: Reset stats
-
-**What It Shows**:
-- Current FPS and frame time (ms)
-- Average, Min, Max FPS
-- Performance status (Good/Warning/Critical)
-- Color-coded indicators:
-  - 🟢 Green: Good (72+ FPS)
-  - 🟡 Yellow: Warning (60-72 FPS)
-  - 🔴 Red: Critical (<60 FPS)
-
-### Recommended Actions
-1. **Scan your models** using the Model Optimization Tool
-2. **Auto-optimize** any models with high vertex counts
-3. **Monitor FPS** during gameplay with the Performance Monitor
-4. If FPS is still low after optimization:
-   - Consider reducing polygon count in your 3D modeling software
-   - Use simplified meshes for weapons (target: 5,000-10,000 vertices)
-   - Create LOD (Level of Detail) groups
-
-### Files Created
-- `Assets/Scripts/Editor/ModelOptimizationChecker.cs` (Editor tool)
-- `Assets/Scripts/Debug/VRPerformanceMonitor.cs` (Runtime monitor)
-
-### Performance Targets for VR
-- **Target FPS**: 72 FPS (Quest 2/3 standard)
-- **Weapon Models**: 5,000-10,000 vertices max
-- **Mesh Compression**: HIGH
-- **Read/Write**: DISABLED
+**In Unity Inspector:**
+1. Select your Game UI Canvas
+2. Check the `collisionMask` - make sure it includes scene mesh layers
+3. Verify `m_TargetOffset` is set to `(0, 0, 0.25)` for closer placement
+4. The script now automatically configures render order on Awake
 
 ---
 
-## ✅ Issue 3: Game UI Clipping Through Walls
+### ✅ 3. Performance Issues / Low FPS
 
-### Problem
-- UI canvas was clipping through walls constantly
-- UI was too far from camera (0.8 meters)
-- Potential layer issues
+**Problem:** Frame rate was poor, likely due to high-poly 3D models (gun/flashlight) and excessive debug logging.
 
-### Root Cause
-1. **Distance Issue**: UI was 0.8m from camera, too far to prevent wall intersections
-2. **Layer Rendering**: Canvas sorting order not high enough
-3. **No Runtime Adjustment**: Fixed distance with no way to adjust
+**Solutions:**
 
-### Solutions Applied
+#### Debug Logging Reduction
+- **WristMenuController**: Added `enableDebugLogging` flag (default: FALSE)
+  - Reduces dozens of Debug.Log calls per frame
+  - Only enable when debugging menu issues
+  
+- **GunScript**: Already had `enableDebugLogging` flag
+  - Added performance tooltips warning to keep it OFF in builds
+  - Reduced collision check overhead
 
-#### A. Reduced UI Distance from Camera
-Changed default distance from **0.8m → 0.35m**
+#### Performance Diagnostics Tool
+You already have `PerformanceDiagnostics.cs` in the Debug folder. To use it:
 
-**Files Modified**:
-- `Assets/Scripts/UI/MRUIConfigurator.cs` (line 23)
-- `Assets/Scripts/UI/GameUILazyFollow.cs` (line 24)
+```csharp
+// In Unity:
+1. Attach PerformanceDiagnostics to any GameObject
+2. Assign your gun and flashlight GameObjects in inspector
+3. Press 'P' key in Play mode (or it runs automatically on Start)
+4. Check Console for poly count reports
+```
 
-**Why 0.35m?**
-- Close enough to prevent wall clipping
-- Far enough to be comfortable to view
-- Standard VR HUD distance
+**Expected Results:**
+- **Good:** < 10,000 vertices per model
+- **Warning:** 10,000 - 50,000 vertices (acceptable but not ideal for VR)
+- **Critical:** > 50,000 vertices (THIS CAUSES LAG!)
 
-#### B. Improved Canvas Sorting Order
-Added configurable sorting order to `MRUIConfigurator.cs`:
-- Default sorting order: **100** (renders on top of environment)
-- Enabled `overrideSorting` to force proper layer rendering
+#### Model Optimization Recommendations
 
-**Files Modified**:
-- `Assets/Scripts/UI/MRUIConfigurator.cs` (lines 28, 136-138)
+If your models are high-poly (>10k vertices), here are your options:
 
-#### C. Created Runtime Distance Adjuster
-**New Tool**: `Assets/Scripts/UI/UIDistanceAdjuster.cs`
+**Option 1: Reduce Poly Count in Blender (Recommended)**
+```
+1. Open model in Blender
+2. Select mesh
+3. Add Modifier > Decimate
+4. Set Ratio to 0.5 (halves poly count)
+5. Apply modifier
+6. Export as FBX
+7. Re-import to Unity
+```
 
-**How to Use**:
-1. Attach `UIDistanceAdjuster` to your Canvas GameObject (with GameUILazyFollow)
-2. During gameplay:
-   - **RIGHT thumbstick UP/DOWN**: Adjust UI distance
-   - **RIGHT thumbstick PRESS**: Reset to default (0.35m)
-3. Find your perfect distance!
+**Option 2: Use Unity's Mesh Simplification**
+```
+1. Select model in Project window
+2. Inspector > Model tab
+3. Check "Optimize Mesh"
+4. Set "Mesh Compression" to "High"
+5. Click Apply
+```
 
-**Settings**:
-- Min distance: 0.2m
-- Max distance: 1.0m
-- Adjustment speed: 0.5m/s
+**Option 3: Use LOD (Level of Detail)**
+```
+1. Create 3 versions of your model (high, medium, low poly)
+2. Add LOD Group component to your gun/flashlight
+3. Assign models to LOD levels
+4. Unity automatically switches based on distance
+```
 
-### Files Created/Modified
-- `Assets/Scripts/UI/MRUIConfigurator.cs` (modified)
-- `Assets/Scripts/UI/GameUILazyFollow.cs` (modified)
-- `Assets/Scripts/UI/UIDistanceAdjuster.cs` (new)
+**Target Poly Counts for VR:**
+- Gun: 3,000 - 5,000 triangles
+- Flashlight: 1,000 - 2,000 triangles
+- Props: < 1,000 triangles each
 
-### Testing (BUILD REQUIRED - Passthrough only works on device!)
-1. Build to Quest headset
-2. Put on headset and look at the UI near a wall
-3. UI should stay visible (not clip through)
-4. If needed, use RIGHT thumbstick to adjust distance
-5. Check debug console (A button on RIGHT controller) for any UI-related messages
-
----
-
-## 🎮 Controller Button Reference
-
-### LEFT Controller
-- **Y button**: Toggle wrist menu
-- **Grip**: Toggle performance monitor
-- **Thumbstick Press**: Reset performance stats
-
-### RIGHT Controller
-- **A button**: Toggle debug console
-- **B button**: Clear debug console logs
-- **Thumbstick UP/DOWN**: Adjust UI distance (if UIDistanceAdjuster is enabled)
-- **Thumbstick Press**: Reset UI distance to default
-
----
-
-## 📋 Next Steps
-
-⚠️ **IMPORTANT**: Since you're using MR Passthrough, you MUST build to device to test. Play mode won't work for passthrough features!
-
-### 1. Test Wrist Menu (BUILD REQUIRED)
-- Build to your Quest headset
-- Press **Y on LEFT controller**
-- Wrist menu should appear
-- Check debug console (A button on RIGHT) for "[WristMenu]" logs
-
-### 2. Optimize Models
-- Open **Tools → VR Optimization → Check Model Performance**
-- Scan weapons folder
-- Auto-optimize any problematic models
-
-### 3. Monitor Performance (BUILD REQUIRED)
-- Add `VRPerformanceMonitor` component to your scene
-- Build to Quest headset
-- In-game: Press LEFT grip to toggle performance overlay
-- Check FPS (should be 72+)
-- Performance data shows in top-left of view
-
-### 4. Adjust UI Position (BUILD REQUIRED)
-- Add `UIDistanceAdjuster` to your main UI Canvas (optional but recommended)
-- Build to Quest headset
-- In-game: Use RIGHT thumbstick UP/DOWN to adjust UI distance
-- Press RIGHT thumbstick to reset to default
-- Find the distance that prevents wall clipping
-
-### 5. Development Build Tips for Faster Testing
-- Use **Development Build** option in Build Settings
-- Enable **Script Debugging** for better error messages
-- Keep Debug Console enabled to see logs in-game
-- Press A (RIGHT controller) to view debug console anytime
+**Other Performance Tips:**
+- **Textures:** Keep textures at 1024x1024 or smaller (2048x2048 max)
+- **Materials:** Use Mobile/Unlit shaders when possible
+- **Lighting:** Use baked lighting instead of real-time
+- **Shadows:** Disable shadows on small objects
+- **Colliders:** Use simple colliders (box/sphere) instead of mesh colliders when possible
 
 ---
 
-## 🚀 Efficient Build-Test Workflow for MR/Passthrough
+### ✅ 4. Duplicate Scripts Consolidated
 
-Since MR Passthrough requires building to device (no Play mode testing), here's how to optimize your workflow:
+**Removed/Moved:**
+- `SimpleWristMenu.cs` → Moved to `Unused/`
+- `WristMenu.cs` → Moved to `Unused/`
 
-### Quick Build Tool (NEW!)
-**One-Click Building**: `Tools → Quick Build → Development Build and Run` (Ctrl+Shift+B)
-
-This new tool:
-- ✓ Auto-saves your scenes
-- ✓ Configures optimal development settings
-- ✓ Builds AND installs automatically
-- ✓ Shows build time and size
-- ✓ Creates timestamped builds (no overwriting!)
-
-**Other Options**:
-- `Tools → Quick Build → Release Build (Optimized)` - For final testing/distribution
-- `Tools → Quick Build → Show Build Info` - Check current build settings
-
-### Manual Build Settings (if not using Quick Build)
-1. **File → Build Settings → Android**
-2. Enable these for faster testing:
-   - ✓ **Development Build** (shows debug console, better errors)
-   - ✓ **Script Debugging** (see C# errors in-game)
-   - ✓ **Wait For Managed Debugger** (optional - for serious debugging)
-3. **Build And Run** (Ctrl+B) - builds and automatically installs
-
-### In-Game Debug Tools (No Computer Needed!)
-All these tools work WITHOUT needing to be connected to your computer:
-
-1. **Debug Console** (DebugConsole.cs - already in your scene)
-   - Press **A button (RIGHT controller)** to see all logs
-   - Shows errors, warnings, and debug messages
-   - Look for messages starting with `[WristMenu]`, `[MRUIConfigurator]`, etc.
-
-2. **Performance Monitor** (VRPerformanceMonitor.cs - add to scene)
-   - Shows real-time FPS
-   - Press **LEFT grip** to toggle
-   - Instantly see if models are causing issues
-
-3. **Controller Help** (ControllerHelpOverlay.cs - add to scene)
-   - Press **both grips** to see all button mappings
-   - Never forget which button does what!
-
-### Debugging Without Inspector
-Since you can't see Unity's Inspector during testing:
-
-1. **Use Debug.Log extensively** - Shows in debug console (A button)
-2. **Check these logs after fixing**:
-   - `[WristMenu]` - Wrist menu initialization and button presses
-   - `[MRUIConfigurator]` - UI configuration and layer setup
-   - `[VRPerformanceMonitor]` - FPS and performance issues
-   - `[ModelOptimizer]` - Model optimization results
-
-3. **Test one fix at a time**:
-   - Fix #1 (Wrist Menu) → Build → Test → Check logs
-   - Fix #2 (Performance) → Build → Test → Check FPS overlay
-   - Fix #3 (UI Clipping) → Build → Test → Move near walls
-
-### Recommended Scene Setup for Testing
-Add these components to your scene for best testing experience:
-- ✓ `DebugConsole` (see logs without computer)
-- ✓ `VRPerformanceMonitor` (see FPS live)
-- ✓ `ControllerHelpOverlay` (remember controls)
-
-### Pro Tips
-- **Keep a build log**: Note what you changed before each build
-- **Use Development Builds**: Slower to build but WAY easier to debug
-- **Check debug console first**: Most issues will show logs there
-- **Use the performance monitor**: Instant feedback on FPS issues
+**Active Scripts:**
+- ✅ `WristMenuController.cs` - Use this for wrist menu
+- ✅ `GameUILazyFollow.cs` - Use this for game HUD
+- ✅ `PerformanceMonitor.cs` - UI-based FPS display
+- ✅ `VRPerformanceMonitor.cs` - OnGUI overlay (toggle with LEFT grip)
+- ✅ `PerformanceDiagnostics.cs` - Model analysis tool
 
 ---
 
-## 🔧 Additional Performance Tips
+## Testing Checklist
 
-### General VR Optimization
-1. **Lighting**:
-   - Use baked lighting where possible
-   - Limit real-time shadows (1-2 max)
-   - Reduce shadow distance
+### Wrist Menu
+- [ ] Press Y button on left controller
+- [ ] Menu appears on wrist
+- [ ] Can interact with buttons/sliders
+- [ ] Menu doesn't spam console logs
+- [ ] Performance is smooth
 
-2. **Physics**:
-   - Use simplified collision meshes
-   - Reduce physics update rate if not critical
-   - Use layers to limit collision checks
+### Game UI
+- [ ] UI follows camera smoothly
+- [ ] UI stays in front of you
+- [ ] UI doesn't clip through walls
+- [ ] UI is visible at all times
+- [ ] UI is closer to camera (more comfortable)
 
-3. **Graphics**:
-   - Use URP optimized shaders
-   - Reduce texture sizes (1024x1024 max for most textures)
-   - Enable GPU instancing on materials
-
-4. **Scene**:
-   - Use occlusion culling
-   - Implement frustum culling
-   - Batch static objects
-
-### Model-Specific Tips
-1. **Weapons** (held by player):
-   - 5,000-10,000 vertices max
-   - 1024x1024 textures
-   - Single material if possible
-
-2. **Environment**:
-   - Use LOD groups for distant objects
-   - Bake as much as possible
-   - Use lightmaps
-
-3. **Effects**:
-   - Limit particle systems (< 50 particles)
-   - Use GPU particles
-   - Simple shaders for VFX
+### Performance
+- [ ] FPS is stable (72+ fps for Quest 2, 90+ for Quest 3)
+- [ ] No stuttering when shooting
+- [ ] Console isn't flooded with debug messages
+- [ ] Run PerformanceDiagnostics to check model poly counts
 
 ---
 
-## 📞 Troubleshooting
+## Performance Monitoring
 
-### Issue: Models still causing low FPS after optimization
-**Solution**: The models may have too many vertices. Options:
-1. Use decimation in Blender to reduce polygon count
-2. Replace with lower-poly models
-3. Create LOD versions
+### Option 1: VRPerformanceMonitor (Recommended for VR)
+```
+- Shows on-screen overlay
+- Toggle with LEFT controller grip button
+- Shows FPS, min/max, average
+- Color-coded performance indicators
+- Reset stats with LEFT thumbstick press
+```
 
-### Issue: UI still clipping through walls
-**Solution**:
-1. Reduce distance further (use UIDistanceAdjuster)
-2. Check canvas layer (should be "UI")
-3. Increase canvas sorting order in MRUIConfigurator
+### Option 2: PerformanceMonitor
+```
+- Requires UI Canvas with Text/Slider elements
+- Shows FPS and memory usage
+- Good for permanent HUD display
+```
 
-### Issue: Wrist menu still not showing
-**Solution**:
-1. Check that WristMenuController is enabled
-2. Verify left hand anchor is assigned
-3. Check debug console for "[WristMenu]" messages
-4. Ensure no other scripts are using Y button on left controller
-
----
-
-## 📝 Summary of New Files
-
-### Editor Tools
-- `Assets/Scripts/Editor/ModelOptimizationChecker.cs` - Analyze and optimize 3D models
-- `Assets/Scripts/Editor/QuickBuildHelper.cs` - One-click building for faster testing
-
-### Runtime Scripts
-- `Assets/Scripts/Debug/VRPerformanceMonitor.cs`
-- `Assets/Scripts/UI/UIDistanceAdjuster.cs`
-
-### Modified Scripts
-- `Assets/Scripts/Debug/DebugConsole.cs`
-- `Assets/Scripts/UI/MRUIConfigurator.cs`
-- `Assets/Scripts/UI/GameUILazyFollow.cs`
+### Option 3: PerformanceDiagnostics
+```
+- One-time analysis tool
+- Press 'P' to run diagnostics
+- Reports poly counts and memory usage
+- Identifies high-poly models
+```
 
 ---
 
-## ✨ Features Added
+## Common Issues & Solutions
 
-1. ✓ Input conflict resolution (wrist menu now works)
-2. ✓ Model performance analysis tool (Editor)
-3. ✓ Quick Build Helper for faster testing (Editor)
-4. ✓ Runtime FPS monitor
-5. ✓ Auto-optimization for 3D models
-6. ✓ UI distance adjustment (prevents wall clipping)
-7. ✓ Improved canvas sorting (renders on top)
-8. ✓ Runtime UI distance adjuster
-9. ✓ Controller help overlay (in-game button reference)
+### "Wrist menu still not showing"
+1. Check that WristMenuController is attached to Canvas
+2. Check that menuPanel is assigned
+3. Make sure no other wrist menu scripts are active
+4. Enable `enableDebugLogging` and check console for errors
+5. Verify OVRCameraRig exists in scene with LeftHandAnchor
+
+### "UI still clipping through walls"
+1. Check `collisionMask` includes your wall layers
+2. Reduce `m_TargetOffset` even more (try 0.2m or 0.15m)
+3. Increase `wallOffset` to 0.15m for more clearance
+4. Make sure walls have colliders
+5. Verify canvas sorting order is set to 100+
+
+### "Still getting low FPS"
+1. Run PerformanceDiagnostics (press P in Play mode)
+2. Check console for high poly count warnings
+3. Disable all `enableDebugLogging` flags
+4. Use Unity Profiler (Window > Analysis > Profiler)
+5. Check for expensive scripts in Update()
+6. Reduce texture sizes
+7. Disable real-time lighting/shadows
+
+### "Too many scripts, feeling overwhelmed"
+Here's what to keep:
+- **UI/WristMenuController.cs** - Wrist menu (Y button)
+- **UI/GameUILazyFollow.cs** - Game HUD positioning
+- **Debug/VRPerformanceMonitor.cs** - FPS overlay
+- **Debug/PerformanceDiagnostics.cs** - Model analysis
+
+Everything else in `Unused/` folder can be deleted if you want.
 
 ---
 
-Good luck with your VR project! 🚀
+## Build Recommendations
+
+Before building for Quest:
+
+1. **Disable ALL debug logging:**
+   ```
+   WristMenuController.enableDebugLogging = FALSE
+   GunScript.enableDebugLogging = FALSE
+   ```
+
+2. **Remove/Disable debug tools:**
+   ```
+   - Disable VRPerformanceMonitor (or remove from scene)
+   - Disable PerformanceDiagnostics
+   - Remove DebugConsole if present
+   ```
+
+3. **Optimize models:**
+   ```
+   - Run PerformanceDiagnostics
+   - Fix any models over 10k vertices
+   - Compress textures to 1024x1024 or less
+   ```
+
+4. **Unity Quality Settings:**
+   ```
+   Edit > Project Settings > Quality
+   - Anti Aliasing: 2x or 4x
+   - Shadows: Soft Shadows (or disable)
+   - Shadow Distance: 20-30m max
+   - VSync: On (for Quest)
+   ```
+
+5. **Test on device:**
+   ```
+   - Use Oculus Performance HUD (on headset)
+   - Check FPS during gameplay
+   - Test in various room sizes
+   ```
+
+---
+
+## Files Changed
+
+### Modified
+- `Assets/Scripts/UI/WristMenuController.cs` - Added debug logging toggle, cleaned up
+- `Assets/Scripts/UI/GameUILazyFollow.cs` - Improved wall avoidance, closer UI, render order fix
+- `Assets/Scripts/Combat/GunScript.cs` - Performance optimization, configurable collision ignore time
+
+### Moved
+- `Assets/Scripts/UI/SimpleWristMenu.cs` → `Assets/Scripts/Unused/SimpleWristMenu.cs`
+- `Assets/Scripts/UI/WristMenu.cs` → `Assets/Scripts/Unused/WristMenu.cs`
+
+### Added
+- `TROUBLESHOOTING_FIXES.md` (this file)
+
+---
+
+## Contact & Support
+
+If you continue having issues:
+1. Enable debug logging on affected component
+2. Note any error messages in console
+3. Check Unity Profiler for performance bottlenecks
+4. Test in a simple empty room first
+5. Verify all OVR components are properly configured
+
+---
+
+## Quick Reference Card
+
+### Button Mappings
+- **Y Button (Left Controller)** - Toggle Wrist Menu
+- **LEFT Grip** - Toggle VR Performance Monitor
+- **LEFT Thumbstick Press** - Reset Performance Stats
+- **P Key (Editor)** - Run Performance Diagnostics
+
+### Performance Targets
+- **FPS:** 72+ (Quest 2), 90+ (Quest 3)
+- **Model Poly Count:** < 5,000 vertices
+- **Texture Size:** 1024x1024 or less
+- **UI Distance:** 0.25m from camera
+
+### Debug Flags (DISABLE IN BUILDS!)
+- `WristMenuController.enableDebugLogging`
+- `GunScript.enableDebugLogging`
+- `PerformanceDiagnostics` component
+- `VRPerformanceMonitor` component
+
+---
+
+Good luck with your VR project! 🎮👻

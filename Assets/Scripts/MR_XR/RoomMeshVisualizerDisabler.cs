@@ -2,9 +2,14 @@ using Meta.XR.BuildingBlocks;
 using UnityEngine;
 using UnityEngine.Events;
 
+// Suppress obsolete warnings for RoomMeshEvent - still functional but deprecated
+// TODO: Migrate to MRUK Effect Mesh building block in future update
+#pragma warning disable CS0618
+
 /// <summary>
 /// Listens to the RoomMeshController load event and immediately hides/destroys
 /// the visualized scene mesh so it does not cover the passthrough view.
+/// NOTE: RoomMeshEvent is deprecated - consider migrating to MRUK Effect Mesh building block
 /// </summary>
 [DefaultExecutionOrder(5)]
 public class RoomMeshVisualizerDisabler : MonoBehaviour
@@ -134,4 +139,6 @@ public class RoomMeshVisualizerDisabler : MonoBehaviour
         }
     }
 }
+
+#pragma warning restore CS0618
 
