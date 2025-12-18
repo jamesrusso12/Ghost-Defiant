@@ -2,23 +2,51 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Controls the wrist-mounted UI that displays game stats (Round, Score, Timer)
+/// Toggle with Y button on left controller
+/// </summary>
 public class WristMenuController : MonoBehaviour
 {
     [Header("Menu References")]
+    [Tooltip("The main menu panel to show/hide")]
     public GameObject menuPanel;
-    public Transform wristTransform;
     
-    [Header("Canvas Configuration")]
-    [Tooltip("Should this menu ignore MRUIConfigurator auto-configuration? Set to true to prevent conflicts.")]
-    public bool ignoreAutoConfiguration = true;
-    [Tooltip("Canvas layer - use 'UI' layer (layer 5)")]
-    public string canvasLayerName = "UI";
-    [Tooltip("UI elements layer - use 'UI' for UI elements")]
-    public string uiElementsLayerName = "UI";
+    [Header("Panels")]
+    [Tooltip("Game stats panel (Round, Score, Timer)")]
+    public GameObject gameStatsPanel;
+    [Tooltip("Settings panel (Volume, Brightness, etc.)")]
+    public GameObject settingsPanel;
+    [Tooltip("End game panel (Game Over screen)")]
+    public GameObject endGamePanel;
     
-    [Header("Debug")]
-    [Tooltip("Enable verbose debug logging (disable for better performance)")]
-    public bool enableDebugLogging = false;
+    [Header("Game Stats UI")]
+    [Tooltip("Round counter text (e.g., 'Round 3')")]
+    public TextMeshProUGUI roundText;
+    [Tooltip("Score display text (e.g., 'Score: 45')")]
+    public TextMeshProUGUI scoreText;
+    [Tooltip("Timer display text (e.g., '23s')")]
+    public TextMeshProUGUI timerText;
+    [Tooltip("Button to open settings panel")]
+    public Button settingsButton;
+    
+    [Header("End Game UI")]
+    [Tooltip("Final score text on end screen")]
+    public TextMeshProUGUI finalScoreText;
+    [Tooltip("Restart button on end screen")]
+    public Button restartButton;
+    
+    [Header("Settings UI")]
+    [Tooltip("Volume slider (0-1)")]
+    public Slider volumeSlider;
+    [Tooltip("Brightness slider (0-1)")]
+    public Slider brightnessSlider;
+    [Tooltip("Pause/Resume button")]
+    public Button pauseButton;
+    [Tooltip("Pause button text")]
+    public TextMeshProUGUI pauseButtonText;
+    [Tooltip("Back button to return to game stats")]
+    public Button backButton;
     
     [Header("Menu Positioning")]
     [Tooltip("Offset from wrist position")]
@@ -28,26 +56,31 @@ public class WristMenuController : MonoBehaviour
     [Tooltip("Scale of the menu")]
     public float menuScale = 0.0005f;
     
-    [Header("Toggle Settings")]
-    [Tooltip("Button to toggle menu (Button.Two = Y on Left Controller, B on Right Controller)")]
+    [Header("Input")]
+    [Tooltip("Button to toggle menu (Y button on left controller)")]
     public OVRInput.Button toggleButton = OVRInput.Button.Two;
-    [Tooltip("Controller to check for input")]
+    [Tooltip("Which controller to use")]
     public OVRInput.Controller controller = OVRInput.Controller.LTouch;
     
-    [Header("UI Elements")]
-    public Button pauseResumeButton;
-    public TextMeshProUGUI pauseResumeText;
-    public Slider volumeSlider;
-    public Slider brightnessSlider;
-    public TextMeshProUGUI volumeValueText;
-    public TextMeshProUGUI brightnessValueText;
+    [Header("Gun Management")]
+    [Tooltip("Reference to the gun script on the right hand")]
+    public GunScript gunScript;
+    [Tooltip("Auto-find gun on start if not assigned")]
+    public bool autoFindGun = true;
     
-    [Header("Hand Interaction Fix")]
-    [Tooltip("Gun GameObject to disable when menu is open (so you can use your hand)")]
+    [Header("Right Hand Objects")]
+    [Tooltip("Gun GameObject to hide when menu is open")]
     public GameObject gunGameObject;
-    [Tooltip("If true, gun will be disabled when menu is open")]
-    public bool disableGunWhenMenuOpen = true;
+    [Tooltip("Flashlight GameObject to hide when menu is open")]
+    public GameObject flashlightGameObject;
+    [Tooltip("Auto-find right hand objects")]
+    public bool autoFindRightHandObjects = true;
     
+    [Header("UI Interaction")]
+    [Tooltip("Drag the 'UIRayInteractor' (from Meta Building Blocks) here. This enables pointing at UI buttons.")]
+    public GameObject uiRayInteractor;
+    
+    private Transform wristTransform;
     private bool isMenuVisible = false;
     private bool isPaused = false;
     private float currentVolume = 1f;
@@ -55,54 +88,38 @@ public class WristMenuController : MonoBehaviour
     
     void Start()
     {
-        if (enableDebugLogging)
+        // Find and attach to left hand
+        FindAndAttachToWrist();
+        
+        // Find gun if not assigned
+        if (autoFindGun && gunScript == null)
         {
-            Debug.Log("[WristMenu] ========== STARTING INITIALIZATION ==========");
-            Debug.Log("[WristMenu] GameObject: " + gameObject.name);
-            Debug.Log("[WristMenu] Active: " + gameObject.activeSelf);
-            Debug.Log("[WristMenu] Menu Panel assigned: " + (menuPanel != null ? menuPanel.name : "NULL"));
+            FindGun();
         }
         
-        // Find wrist transform if not assigned
-        if (wristTransform == null)
-        {
-            FindWristTransform();
-        }
-        else if (enableDebugLogging)
-        {
-            Debug.Log("[WristMenu] Wrist transform already assigned: " + wristTransform.name);
-        }
+        // Configure canvas
+        ConfigureCanvas();
         
-        // Attach menu directly to left hand anchor (like flashlight)
-        if (wristTransform != null)
-        {
-            AttachToLeftHand();
-        }
-        else
-        {
-            Debug.LogError("[WristMenu] ❌ Cannot attach - wrist transform is null!");
-        }
+        // Subscribe to game events
+        SubscribeToGameEvents();
         
-        // Configure canvas properly for wrist menu (before MRUIConfigurator interferes)
-        ConfigureCanvasForWristMenu();
-        
-        // Initialize menu state
-        if (menuPanel != null)
-        {
-            menuPanel.SetActive(false);
-            isMenuVisible = false;
-            if (enableDebugLogging) Debug.Log("[WristMenu] Menu panel found and hidden (press Y to show)");
-        }
-        else
-        {
-            Debug.LogError("[WristMenu] Menu panel is not assigned!");
-        }
+        // Initialize UI
+        InitializeUI();
         
         // Setup button listeners
-        if (pauseResumeButton != null)
+        if (settingsButton != null)
         {
-            pauseResumeButton.onClick.AddListener(TogglePause);
-            if (enableDebugLogging) Debug.Log("[WristMenu] Pause button listener added");
+            settingsButton.onClick.AddListener(ShowSettingsPanel);
+        }
+        
+        if (backButton != null)
+        {
+            backButton.onClick.AddListener(ShowGameStatsPanel);
+        }
+        
+        if (pauseButton != null)
+        {
+            pauseButton.onClick.AddListener(TogglePause);
         }
         
         // Setup slider listeners
@@ -110,471 +127,357 @@ public class WristMenuController : MonoBehaviour
         {
             volumeSlider.value = currentVolume;
             volumeSlider.onValueChanged.AddListener(OnVolumeChanged);
-            if (enableDebugLogging) Debug.Log("[WristMenu] Volume slider configured");
         }
         
         if (brightnessSlider != null)
         {
             brightnessSlider.value = currentBrightness;
             brightnessSlider.onValueChanged.AddListener(OnBrightnessChanged);
-            if (enableDebugLogging) Debug.Log("[WristMenu] Brightness slider configured");
         }
         
-        UpdatePauseButtonText();
-        
-        // Final verification (only if debug logging enabled)
-        if (enableDebugLogging)
+        if (restartButton != null)
         {
-            Canvas canvasComponent = GetComponent<Canvas>();
-            Debug.Log("[WristMenu] ========== INITIALIZATION SUMMARY ==========");
-            Debug.Log("[WristMenu] Canvas GameObject: " + gameObject.name);
-            Debug.Log("[WristMenu] Canvas Active: " + gameObject.activeSelf);
-            Debug.Log("[WristMenu] Canvas Layer: " + gameObject.layer + " (" + LayerMask.LayerToName(gameObject.layer) + ")");
-            Debug.Log("[WristMenu] Canvas Render Mode: " + (canvasComponent != null ? canvasComponent.renderMode.ToString() : "NULL"));
-            Debug.Log("[WristMenu] Canvas World Camera: " + (canvasComponent != null && canvasComponent.worldCamera != null ? canvasComponent.worldCamera.name : "NULL"));
-            Debug.Log("[WristMenu] Menu Panel: " + (menuPanel != null ? menuPanel.name : "NULL"));
-            Debug.Log("[WristMenu] Menu Panel Active: " + (menuPanel != null ? menuPanel.activeSelf.ToString() : "N/A"));
-            Debug.Log("[WristMenu] Wrist Transform: " + (wristTransform != null ? wristTransform.name : "NULL"));
-            Debug.Log("[WristMenu] Parent: " + (transform.parent != null ? transform.parent.name : "NULL"));
-            Debug.Log("[WristMenu] Position: " + transform.position);
-            Debug.Log("[WristMenu] Scale: " + transform.localScale);
-            Debug.Log("[WristMenu] Gun GameObject: " + (gunGameObject != null ? gunGameObject.name : "NULL"));
-            Debug.Log("[WristMenu] Disable Gun When Menu Open: " + disableGunWhenMenuOpen);
-            Debug.Log("[WristMenu] ========== READY FOR TESTING ==========");
-            Debug.Log("[WristMenu] Press Y button (Button.Two) on left controller to toggle menu");
+            restartButton.onClick.AddListener(OnRestartButtonClicked);
+        }
+        
+        // Show game stats panel by default
+        ShowGameStatsPanel();
+        
+        // Hide menu by default
+        if (menuPanel != null)
+        {
+            menuPanel.SetActive(false);
+        }
+        
+        // Ensure UI Ray Interactor is off at start (will be enabled when menu opens)
+        if (uiRayInteractor != null)
+        {
+            uiRayInteractor.SetActive(false);
         }
     }
     
-    void AttachToLeftHand()
+    void FindAndAttachToWrist()
     {
-        if (wristTransform == null)
-        {
-            Debug.LogError("[WristMenu] ❌ Cannot attach - wrist transform is null!");
-            return;
-        }
-        
-        if (enableDebugLogging)
-        {
-            Debug.Log("[WristMenu] ✓ Found left hand anchor: " + wristTransform.name);
-            Debug.Log("[WristMenu] Left hand anchor position: " + wristTransform.position);
-            Debug.Log("[WristMenu] Left hand anchor active: " + wristTransform.gameObject.activeSelf);
-        }
-        
-        // Parent the entire canvas to the left hand anchor
-        transform.SetParent(wristTransform, false);
-        
-        // Set local position and rotation relative to hand
-        transform.localPosition = menuOffset;
-        transform.localRotation = Quaternion.Euler(menuRotationOffset);
-        transform.localScale = Vector3.one * menuScale;
-        
-        if (enableDebugLogging)
-        {
-            Debug.Log($"[WristMenu] ✓ Attached to left hand anchor");
-            Debug.Log($"[WristMenu]   Local Position: {transform.localPosition}");
-            Debug.Log($"[WristMenu]   Local Rotation: {transform.localEulerAngles}");
-            Debug.Log($"[WristMenu]   Local Scale: {transform.localScale}");
-            Debug.Log($"[WristMenu]   Parent: {transform.parent.name}");
-            Debug.Log($"[WristMenu]   World Position: {transform.position}");
-        }
-    }
-    
-    void FindWristTransform()
-    {
-        if (enableDebugLogging) Debug.Log("[WristMenu] Searching for left hand anchor...");
-        
-        // Method 1: Try FindFirstObjectByType
+        // Find OVRCameraRig and get left hand anchor
         OVRCameraRig cameraRig = FindFirstObjectByType<OVRCameraRig>();
         if (cameraRig != null)
         {
             wristTransform = cameraRig.leftHandAnchor;
-            if (enableDebugLogging) Debug.Log("[WristMenu] Found OVRCameraRig, left hand anchor: " + (wristTransform != null ? wristTransform.name : "NULL"));
-            return;
         }
         
-        // Method 2: Try GameObject.Find
-        GameObject leftHand = GameObject.Find("LeftHandAnchor");
-        if (leftHand != null)
+        if (wristTransform == null)
         {
-            wristTransform = leftHand.transform;
-            if (enableDebugLogging) Debug.Log("[WristMenu] Found LeftHandAnchor via GameObject.Find");
+            Debug.LogError("[WristUI] Could not find LeftHandAnchor!");
             return;
         }
         
-        // Method 3: Try alternate name
-        leftHand = GameObject.Find("LeftControllerAnchor");
-        if (leftHand != null)
+        // Attach to wrist
+        transform.SetParent(wristTransform, false);
+        transform.localPosition = menuOffset;
+        transform.localRotation = Quaternion.Euler(menuRotationOffset);
+        transform.localScale = Vector3.one * menuScale;
+    }
+    
+    void FindGun()
+    {
+        // Try to find the gun script in the scene
+        gunScript = FindFirstObjectByType<GunScript>();
+        
+        if (gunScript != null)
         {
-            wristTransform = leftHand.transform;
-            if (enableDebugLogging) Debug.Log("[WristMenu] Found LeftControllerAnchor via GameObject.Find");
-            return;
+            Debug.Log("[WristUI] Gun script found and linked!");
+            
+            // Auto-find the gun GameObject if not assigned
+            if (autoFindRightHandObjects && gunGameObject == null)
+            {
+                gunGameObject = gunScript.gameObject;
+                Debug.Log($"[WristUI] Gun GameObject auto-linked: {gunGameObject.name}");
+            }
         }
-        
-        // Method 4: Search through hierarchy
-        OVRCameraRig[] rigs = FindObjectsByType<OVRCameraRig>(FindObjectsSortMode.None);
-        if (rigs.Length > 0)
+        else
         {
-            wristTransform = rigs[0].leftHandAnchor;
-            if (enableDebugLogging) Debug.Log("[WristMenu] Found OVRCameraRig via FindObjectsByType, left hand: " + (wristTransform != null ? wristTransform.name : "NULL"));
-            return;
+            Debug.LogWarning("[WristUI] Could not find GunScript in scene. Gun will not be disabled when menu is open.");
         }
         
-        Debug.LogError("[WristMenu] Could not find left hand anchor! Make sure OVRCameraRig is in the scene.");
+        // Try to find flashlight if not assigned
+        if (autoFindRightHandObjects && flashlightGameObject == null)
+        {
+            // Look for common flashlight names
+            GameObject[] allObjects = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            foreach (GameObject obj in allObjects)
+            {
+                if (obj.name.ToLower().Contains("flashlight") || 
+                    obj.name.ToLower().Contains("flash light") ||
+                    obj.name.ToLower().Contains("torch"))
+                {
+                    flashlightGameObject = obj;
+                    Debug.Log($"[WristUI] Flashlight GameObject auto-linked: {flashlightGameObject.name}");
+                    break;
+                }
+            }
+            
+            if (flashlightGameObject == null)
+            {
+                Debug.LogWarning("[WristUI] Could not auto-find flashlight. Please assign manually if you have one.");
+            }
+        }
+    }
+    
+    void ConfigureCanvas()
+    {
+        Canvas canvas = GetComponent<Canvas>();
+        if (canvas == null) return;
+        
+        // Set to World Space
+        canvas.renderMode = RenderMode.WorldSpace;
+        
+        // Find and assign camera
+        OVRCameraRig cameraRig = FindFirstObjectByType<OVRCameraRig>();
+        if (cameraRig != null && cameraRig.centerEyeAnchor != null)
+        {
+            Camera cam = cameraRig.centerEyeAnchor.GetComponent<Camera>();
+            if (cam != null)
+            {
+                canvas.worldCamera = cam;
+            }
+        }
+        
+        // Set high sorting order to render on top
+        canvas.sortingOrder = 1000;
+        canvas.overrideSorting = true;
+        
+        // Ensure raycaster exists
+        if (GetComponent<GraphicRaycaster>() == null)
+        {
+            gameObject.AddComponent<GraphicRaycaster>();
+        }
+    }
+    
+    void SubscribeToGameEvents()
+    {
+        GameManager.OnRoundStarted += UpdateRound;
+        GameManager.OnScoreChanged += UpdateScore;
+        GameManager.OnGameEnded += OnGameEnded;
+    }
+    
+    void InitializeUI()
+    {
+        if (roundText != null) roundText.text = "Round 0";
+        if (scoreText != null) scoreText.text = "Score: 0";
+        if (timerText != null) timerText.text = "0s";
+        UpdatePauseButtonText();
     }
     
     void Update()
     {
-        // Try to find wrist transform if still null and attach
-        if (wristTransform == null)
-        {
-            FindWristTransform();
-            if (wristTransform != null)
-            {
-                AttachToLeftHand();
-            }
-        }
-        // Ensure we're still parented to the hand (in case something unparented us)
-        else if (transform.parent != wristTransform)
-        {
-            AttachToLeftHand();
-        }
-        
-        // Check for toggle input - using multiple detection methods for robustness
-        bool buttonPressed = false;
-        
-        // Method 1: Standard OVRInput.GetDown with specific controller
+        // Toggle menu with Y button
         if (OVRInput.GetDown(toggleButton, controller))
         {
-            buttonPressed = true;
-            if (enableDebugLogging) Debug.Log("[WristMenu] ✓ Y button detected via OVRInput.GetDown (controller-specific)");
-        }
-        
-        // Method 2: Backup - Check without controller filter (any controller)
-        if (!buttonPressed && OVRInput.GetDown(toggleButton))
-        {
-            buttonPressed = true;
-            if (enableDebugLogging) Debug.Log("[WristMenu] ✓ Y button detected via OVRInput.GetDown (any controller)");
-        }
-        
-        // Method 3: Backup - Check raw button state
-        if (!buttonPressed && OVRInput.GetDown(OVRInput.RawButton.Y))
-        {
-            buttonPressed = true;
-            if (enableDebugLogging) Debug.Log("[WristMenu] ✓ Y button detected via OVRInput.RawButton.Y");
-        }
-        
-        // Method 4: Additional backup - Check Button.Four (sometimes Y is mapped here)
-        if (!buttonPressed && OVRInput.GetDown(OVRInput.Button.Four))
-        {
-            buttonPressed = true;
-            if (enableDebugLogging) Debug.Log("[WristMenu] ✓ Y button detected via Button.Four");
-        }
-        
-        if (buttonPressed)
-        {
-            if (enableDebugLogging)
-            {
-                Debug.Log("[WristMenu] ✓✓✓ TOGGLE BUTTON PRESSED ✓✓✓");
-                Debug.Log("[WristMenu] Button: " + toggleButton);
-                Debug.Log("[WristMenu] Controller: " + controller);
-            }
             ToggleMenu();
         }
-        
-        // Debug controller state every few seconds (for build testing) - only if debug logging enabled
-        if (enableDebugLogging && Time.frameCount % 300 == 0) // Every ~5 seconds at 60fps
-        {
-            Debug.Log($"[WristMenu] Status Check - Menu Visible: {isMenuVisible}, Panel Active: {(menuPanel != null ? menuPanel.activeSelf.ToString() : "NULL")}, Parent: {(transform.parent != null ? transform.parent.name : "NULL")}");
-            
-            // Log controller connection status
-            bool leftConnected = OVRInput.IsControllerConnected(OVRInput.Controller.LTouch);
-            bool rightConnected = OVRInput.IsControllerConnected(OVRInput.Controller.RTouch);
-            OVRInput.Controller activeController = OVRInput.GetActiveController();
-            Debug.Log($"[WristMenu] Controller Status - Left: {leftConnected}, Right: {rightConnected}, Active: {activeController}");
-        }
-        
-        // No need to update position every frame since we're parented to the hand
-        // The menu will automatically follow the hand transform
+    }
+    
+    // Public method to check if menu is visible (for other scripts like MenuPointerHelper)
+    public bool IsMenuVisible()
+    {
+        return isMenuVisible;
     }
     
     void ToggleMenu()
     {
         isMenuVisible = !isMenuVisible;
         
-        if (enableDebugLogging)
-        {
-            Debug.Log("[WristMenu] ========== MENU TOGGLE ==========");
-            Debug.Log("[WristMenu] Menu state: " + (isMenuVisible ? "VISIBLE" : "HIDDEN"));
-            Debug.Log("[WristMenu] Menu Panel GameObject: " + (menuPanel != null ? menuPanel.name : "NULL"));
-            Debug.Log("[WristMenu] Canvas GameObject: " + gameObject.name);
-            Debug.Log("[WristMenu] Canvas Active: " + gameObject.activeSelf);
-            Debug.Log("[WristMenu] Canvas Parent: " + (transform.parent != null ? transform.parent.name : "NULL"));
-            Debug.Log("[WristMenu] Canvas Position: " + transform.position);
-            Debug.Log("[WristMenu] Canvas Scale: " + transform.localScale);
-        }
-        
         if (menuPanel != null)
         {
             menuPanel.SetActive(isMenuVisible);
-            if (enableDebugLogging)
+            
+            // Always show game stats panel when opening menu
+            if (isMenuVisible)
             {
-                Debug.Log("[WristMenu] Menu Panel SetActive(" + isMenuVisible + ")");
-                Debug.Log("[WristMenu] Menu Panel Active: " + menuPanel.activeSelf);
-                Debug.Log("[WristMenu] Menu Panel ActiveInHierarchy: " + menuPanel.activeInHierarchy);
+                ShowGameStatsPanel();
             }
+        }
+        
+        // Manage gun state - disable when menu is open, enable when closed
+        ManageGunState();
+    }
+    
+    void ManageGunState()
+    {
+        // Disable gun script when menu is visible
+        if (gunScript != null)
+        {
+            gunScript.enabled = !isMenuVisible;
+            Debug.Log($"[WristUI] Gun script {(isMenuVisible ? "disabled" : "enabled")}");
+        }
+        
+        // Hide/show gun GameObject
+        if (gunGameObject != null)
+        {
+            gunGameObject.SetActive(!isMenuVisible);
+            Debug.Log($"[WristUI] Gun GameObject {(isMenuVisible ? "hidden" : "shown")}: {gunGameObject.name}");
+        }
+        
+        // Hide/show flashlight GameObject
+        if (flashlightGameObject != null)
+        {
+            flashlightGameObject.SetActive(!isMenuVisible);
+            Debug.Log($"[WristUI] Flashlight GameObject {(isMenuVisible ? "hidden" : "shown")}: {flashlightGameObject.name}");
+        }
+        
+        // Toggle UI Ray Interactor - enabled when menu visible, disabled when hidden
+        if (uiRayInteractor != null)
+        {
+            uiRayInteractor.SetActive(isMenuVisible);
+        }
+        
+        if (isMenuVisible)
+        {
+            Debug.Log("[WristUI] ===== MENU OPEN: Gun hidden, UI Ray ENABLED =====");
         }
         else
         {
-            Debug.LogError("[WristMenu] ❌ Cannot toggle menu - menuPanel is null!");
-        }
-        
-        // Toggle gun visibility to free up hand for interaction
-        if (disableGunWhenMenuOpen && gunGameObject != null)
-        {
-            // When menu opens, hide gun. When menu closes, show gun.
-            gunGameObject.SetActive(!isMenuVisible);
-            if (enableDebugLogging) Debug.Log("[WristMenu] Gun " + (isMenuVisible ? "DISABLED" : "ENABLED") + " (free hand for menu interaction)");
+            Debug.Log("[WristUI] ===== MENU CLOSED: Gun shown, UI Ray DISABLED =====");
         }
     }
     
-    // Removed UpdateMenuPosition() - no longer needed since menu is parented to hand
-    // The menu will automatically follow the hand transform
+    // ============================================================
+    // PANEL SWITCHING
+    // ============================================================
     
-    public void TogglePause()
+    void ShowGameStatsPanel()
+    {
+        if (gameStatsPanel != null) gameStatsPanel.SetActive(true);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (endGamePanel != null) endGamePanel.SetActive(false);
+    }
+    
+    void ShowSettingsPanel()
+    {
+        if (gameStatsPanel != null) gameStatsPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(true);
+        if (endGamePanel != null) endGamePanel.SetActive(false);
+    }
+    
+    void ShowEndGamePanel(int finalScore)
+    {
+        if (gameStatsPanel != null) gameStatsPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (endGamePanel != null) endGamePanel.SetActive(true);
+        
+        if (finalScoreText != null)
+        {
+            finalScoreText.text = $"Final Score: {finalScore}";
+        }
+        
+        // Auto-open menu to show end screen
+        if (!isMenuVisible && menuPanel != null)
+        {
+            isMenuVisible = true;
+            menuPanel.SetActive(true);
+        }
+    }
+    
+    // ============================================================
+    // GAME STATS UPDATES (Called by GameManager via events)
+    // ============================================================
+    
+    void UpdateRound(int round)
+    {
+        if (roundText != null)
+        {
+            roundText.text = $"Round {round}";
+        }
+    }
+    
+    void UpdateScore(int score)
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = $"Score: {score}";
+        }
+    }
+    
+    public void UpdateTimer(float timeRemaining)
+    {
+        if (timerText != null)
+        {
+            timerText.text = Mathf.CeilToInt(timeRemaining) + "s";
+        }
+    }
+    
+    void OnGameEnded()
+    {
+        // Show end game panel with final score
+        if (GameManager.instance != null)
+        {
+            int finalScore = GameManager.instance.GetTotalScore();
+            ShowEndGamePanel(finalScore);
+        }
+        
+        Debug.Log("[WristUI] Game ended - showing end screen");
+    }
+    
+    void OnRestartButtonClicked()
+    {
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.RestartGame();
+        }
+    }
+    
+    // ============================================================
+    // PAUSE FUNCTIONALITY
+    // ============================================================
+    
+    void TogglePause()
     {
         isPaused = !isPaused;
+        Time.timeScale = isPaused ? 0f : 1f;
         
-        if (isPaused)
-        {
-            Time.timeScale = 0f;
-        }
-        else
-        {
-            Time.timeScale = 1f;
-        }
-        
-        UpdatePauseButtonText();
-        
-        // Notify game manager
+        // Notify GameManager
         if (GameManager.instance != null)
         {
             GameManager.instance.SetPaused(isPaused);
         }
+        
+        UpdatePauseButtonText();
     }
     
     void UpdatePauseButtonText()
     {
-        if (pauseResumeText != null)
+        if (pauseButtonText != null)
         {
-            pauseResumeText.text = isPaused ? "Resume" : "Pause";
+            pauseButtonText.text = isPaused ? "Resume" : "Pause";
         }
     }
+    
+    // ============================================================
+    // SETTINGS CONTROLS
+    // ============================================================
     
     void OnVolumeChanged(float value)
     {
         currentVolume = value;
         AudioListener.volume = value;
-        
-        if (volumeValueText != null)
-        {
-            volumeValueText.text = Mathf.RoundToInt(value * 100f) + "%";
-        }
     }
     
     void OnBrightnessChanged(float value)
     {
         currentBrightness = value;
-        
-        if (brightnessValueText != null)
-        {
-            brightnessValueText.text = Mathf.RoundToInt(value * 100f) + "%";
-        }
-        
-        // Apply brightness to camera
-        Camera mainCamera = Camera.main;
-        if (mainCamera != null)
-        {
-            // Adjust camera's HDR exposure or post-processing
-            // This is a simple approach - you might want to use URP post-processing instead
-            mainCamera.allowHDR = true;
-        }
-        
-        // If using URP, you would adjust the exposure in the volume profile
-        ApplyBrightnessToVolume(value);
+        // Adjust ambient light intensity
+        RenderSettings.ambientIntensity = value;
     }
     
-    void ApplyBrightnessToVolume(float brightness)
-    {
-        // This would integrate with Unity's Volume system for URP
-        // For now, we'll use a simple approach with RenderSettings
-        RenderSettings.ambientIntensity = brightness;
-    }
+    // ============================================================
+    // CLEANUP
+    // ============================================================
     
-    public bool IsPaused()
+    void OnDestroy()
     {
-        return isPaused;
-    }
-    
-    public void SetMenuVisible(bool visible)
-    {
-        isMenuVisible = visible;
-        if (menuPanel != null)
-        {
-            menuPanel.SetActive(visible);
-        }
-    }
-    
-    void ConfigureCanvasForWristMenu()
-    {
-        Canvas canvas = GetComponent<Canvas>();
-        if (canvas == null)
-        {
-            Debug.LogError("[WristMenu] No Canvas component found on this GameObject!");
-            return;
-        }
-        
-        if (enableDebugLogging) Debug.Log("[WristMenu] Configuring Canvas for wrist menu...");
-        
-        // Force World Space rendering
-        canvas.renderMode = RenderMode.WorldSpace;
-        
-        // Find and assign camera
-        if (canvas.worldCamera == null)
-        {
-            OVRCameraRig cameraRig = FindFirstObjectByType<OVRCameraRig>();
-            if (cameraRig != null && cameraRig.centerEyeAnchor != null)
-            {
-                Camera cam = cameraRig.centerEyeAnchor.GetComponent<Camera>();
-                if (cam != null)
-                {
-                    canvas.worldCamera = cam;
-                    if (enableDebugLogging) Debug.Log("[WristMenu] Assigned CenterEyeAnchor camera to Canvas");
-                }
-            }
-            
-            if (canvas.worldCamera == null)
-            {
-                canvas.worldCamera = Camera.main;
-                if (enableDebugLogging) Debug.Log("[WristMenu] Assigned Main camera to Canvas");
-            }
-        }
-        
-        // Set proper scale for wrist menu (only if not already parented)
-        if (canvas.transform.parent == null)
-        {
-            if (canvas.transform.localScale.magnitude < 0.0001f || canvas.transform.localScale.magnitude > 1f)
-            {
-                canvas.transform.localScale = Vector3.one * menuScale;
-                if (enableDebugLogging) Debug.Log($"[WristMenu] Set Canvas scale to {menuScale}");
-            }
-        }
-        
-        // CRITICAL: Ensure Canvas renders ABOVE passthrough walls
-        // For Canvas UI, use high sorting order (render queue doesn't work the same way)
-        canvas.sortingOrder = 1000; // Very high value to ensure it renders on top
-        canvas.overrideSorting = true; // Ensure this canvas controls its own sorting
-        if (enableDebugLogging) Debug.Log($"[WristMenu] ✓ Set Canvas sorting order to {canvas.sortingOrder} (renders on top)");
-        
-        // Also disable culling on all canvas renderers to prevent disappearing
-        CanvasRenderer[] allRenderers = canvas.GetComponentsInChildren<CanvasRenderer>(true);
-        int rendererCount = 0;
-        foreach (CanvasRenderer renderer in allRenderers)
-        {
-            if (renderer != null)
-            {
-                renderer.cullTransparentMesh = false;
-                rendererCount++;
-            }
-        }
-        if (enableDebugLogging) Debug.Log($"[WristMenu] ✓ Disabled culling on {rendererCount} canvas renderers");
-        
-        // Configure layers - FORCE UI layer (layer 5) for everything
-        int uiLayer = LayerMask.NameToLayer("UI");
-        
-        if (uiLayer == -1)
-        {
-            Debug.LogError("[WristMenu] ❌ UI layer not found! Make sure layer 5 is named 'UI'");
-            // Fallback: use layer 5 directly
-            uiLayer = 5;
-        }
-        
-        // Set canvas and all children to UI layer (layer 5)
-        SetLayerRecursively(gameObject, uiLayer);
-        if (enableDebugLogging) Debug.Log($"[WristMenu] ✓ Set Canvas and all children to UI layer (layer {uiLayer})");
-        
-        // Verify layer was set correctly
-        if (gameObject.layer != uiLayer)
-        {
-            if (enableDebugLogging) Debug.LogWarning($"[WristMenu] ⚠️ Layer mismatch! Expected {uiLayer}, got {gameObject.layer}");
-            gameObject.layer = uiLayer; // Force it
-        }
-        
-        if (enableDebugLogging) Debug.Log($"[WristMenu] Canvas layer: {gameObject.layer} ({LayerMask.LayerToName(gameObject.layer)})");
-        
-        // Ensure Graphic Raycaster exists
-        GraphicRaycaster raycaster = canvas.GetComponent<GraphicRaycaster>();
-        if (raycaster == null)
-        {
-            raycaster = canvas.gameObject.AddComponent<GraphicRaycaster>();
-            if (enableDebugLogging) Debug.Log("[WristMenu] Added Graphic Raycaster");
-        }
-        
-        // Add CanvasGroup for better visibility control
-        CanvasGroup canvasGroup = canvas.GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-        {
-            canvasGroup = canvas.gameObject.AddComponent<CanvasGroup>();
-            canvasGroup.alpha = 1f;
-            canvasGroup.interactable = true;
-            canvasGroup.blocksRaycasts = true;
-            if (enableDebugLogging) Debug.Log("[WristMenu] ✓ Added CanvasGroup component");
-        }
-        else if (enableDebugLogging)
-        {
-            Debug.Log("[WristMenu] ✓ CanvasGroup already exists");
-        }
-        
-        // Make sure camera can see the UI layer (layer 5)
-        if (canvas.worldCamera != null)
-        {
-            Camera cam = canvas.worldCamera;
-            int uiLayerBit = 1 << uiLayer;
-            
-            // Add UI layer to camera culling mask
-            if ((cam.cullingMask & uiLayerBit) == 0)
-            {
-                cam.cullingMask |= uiLayerBit;
-                if (enableDebugLogging) Debug.Log($"[WristMenu] ✓ Added UI layer ({uiLayer}) to camera culling mask");
-            }
-            else if (enableDebugLogging)
-            {
-                Debug.Log($"[WristMenu] ✓ Camera already sees UI layer ({uiLayer})");
-            }
-            
-            if (enableDebugLogging)
-            {
-                Debug.Log($"[WristMenu] Camera: {cam.name}");
-                Debug.Log($"[WristMenu] Camera culling mask: {cam.cullingMask} (binary: {System.Convert.ToString(cam.cullingMask, 2)})");
-                Debug.Log($"[WristMenu] UI layer bit ({uiLayer}): " + ((cam.cullingMask & uiLayerBit) != 0 ? "VISIBLE" : "HIDDEN"));
-            }
-        }
-        else if (enableDebugLogging)
-        {
-            Debug.LogWarning("[WristMenu] ⚠️ Canvas world camera is null!");
-        }
-        
-        if (enableDebugLogging) Debug.Log("[WristMenu] ========== CANVAS CONFIGURATION COMPLETE ==========");
-    }
-    
-    void SetLayerRecursively(GameObject obj, int layer)
-    {
-        if (obj == null) return;
-        
-        obj.layer = layer;
-        foreach (Transform child in obj.transform)
-        {
-            SetLayerRecursively(child.gameObject, layer);
-        }
+        // Unsubscribe from events to prevent memory leaks
+        GameManager.OnRoundStarted -= UpdateRound;
+        GameManager.OnScoreChanged -= UpdateScore;
+        GameManager.OnGameEnded -= OnGameEnded;
     }
 }
-

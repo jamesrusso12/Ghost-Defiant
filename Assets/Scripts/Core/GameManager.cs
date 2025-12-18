@@ -7,12 +7,9 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
-    [Header("UI Elements")]
-    public TextMeshProUGUI roundText;
-    public TextMeshProUGUI timerText;
-    public TextMeshProUGUI scoreText;
-    public GameObject endScreen;
-    public TextMeshProUGUI finalScoreText;
+    [Header("UI References")]
+    [Tooltip("Reference to WristMenuController for game stats display")]
+    public WristMenuController wristUI;
 
     [Header("References")]
     public GhostSpawner ghostSpawner;
@@ -52,50 +49,31 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Configure UI for Mixed Reality
-        ConfigureUIForMR();
+        // Find WristUI if not assigned
+        if (wristUI == null)
+        {
+            wristUI = FindFirstObjectByType<WristMenuController>();
+            if (wristUI == null)
+            {
+                Debug.LogWarning("[GameManager] WristMenuController not found in scene!");
+            }
+        }
         
         StartNextRound();
     }
     
-    private void ConfigureUIForMR()
-    {
-        // Find or create MRUI Configurator
-        uiConfigurator = FindFirstObjectByType<MRUIConfigurator>();
-        if (uiConfigurator == null)
-        {
-            GameObject configuratorObj = new GameObject("MRUI Configurator");
-            uiConfigurator = configuratorObj.AddComponent<MRUIConfigurator>();
-        }
-
-        // Configure all canvases
-        if (uiConfigurator != null)
-        {
-            uiConfigurator.ConfigureAllCanvases();
-        }
-
-        // Ensure UI elements are properly configured
-        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
-        foreach (Canvas canvas in canvases)
-        {
-            // Make sure UI elements are visible and properly scaled for MR
-            if (canvas.renderMode == RenderMode.WorldSpace)
-            {
-                // Ensure world space UI is properly scaled
-                if (canvas.transform.localScale.magnitude < 0.0001f)
-                {
-                    canvas.transform.localScale = Vector3.one * 0.001f;
-                }
-            }
-        }
-    }
 
     private void Update()
     {
         if (roundActive && !isPaused)
         {
             timeRemaining -= Time.deltaTime;
-            timerText.text = Mathf.CeilToInt(timeRemaining) + "s";
+            
+            // Update timer on wrist UI
+            if (wristUI != null)
+            {
+                wristUI.UpdateTimer(timeRemaining);
+            }
 
             if (timeRemaining <= 0)
             {
@@ -139,11 +117,9 @@ public class GameManager : MonoBehaviour
         ghostsToKill = ghostsPerRound[round - 1];
         timeRemaining = roundTimes[round - 1];
 
-        roundText.text = $"Round {round}";
-        scoreText.text = $"Score: {totalGhostsKilled}";
-
-        // Notify other systems about round start
+        // Notify other systems about round start (WristUI listens to this event)
         OnRoundStarted?.Invoke(round);
+        OnScoreChanged?.Invoke(totalGhostsKilled);
 
         ghostSpawner.BeginRound(round);
     }
@@ -153,7 +129,7 @@ public class GameManager : MonoBehaviour
         ghostsKilledThisRound++;
         totalGhostsKilled++;
 
-        scoreText.text = $"Score: {totalGhostsKilled}";
+        // Notify listeners (WristUI) about score change
         OnScoreChanged?.Invoke(totalGhostsKilled);
 
         if (ghostsKilledThisRound >= ghostsToKill)
@@ -187,18 +163,10 @@ public class GameManager : MonoBehaviour
 
     IEnumerator RoundTransition()
     {
-        RectTransform rt = roundText.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero;
-
-        roundText.text = $"Round {currentRound} Complete!";
+        // Notify about round completion
+        Debug.Log($"[GameManager] Round {currentRound} Complete!");
 
         yield return new WaitForSeconds(3f);
-
-        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
-        rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(30f, -30f);
 
         StartNextRound();
     }
@@ -208,19 +176,19 @@ public class GameManager : MonoBehaviour
         roundActive = false;
         ghostSpawner.StopSpawning();
 
+        // Notify listeners about game end (WristUI will show end screen)
         OnGameEnded?.Invoke();
-
-        roundText.gameObject.SetActive(false);
-        timerText.gameObject.SetActive(false);
-
-        endScreen.SetActive(true);
-        finalScoreText.text = $"Final Score: {totalGhostsKilled}";
+    }
+    
+    public int GetTotalScore()
+    {
+        return totalGhostsKilled;
     }
 
     public void AddScore(int points)
     {
         totalGhostsKilled += points;
-        scoreText.text = $"Score: {totalGhostsKilled}";
+        OnScoreChanged?.Invoke(totalGhostsKilled);
     }
 
     public void RestartGame()
