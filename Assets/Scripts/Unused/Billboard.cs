@@ -2,6 +2,10 @@ using UnityEngine;
 
 namespace XRMultiplayer
 {
+    /// <summary>
+    /// Billboard component that follows camera with offset positioning.
+    /// Optimized for Meta XR SDK - auto-detects OVRCameraRig.
+    /// </summary>
     public class Billboard : MonoBehaviour
     {
         [SerializeField] private float positionLerpSpeed = 5f;
@@ -19,6 +23,20 @@ namespace XRMultiplayer
 
         private System.Collections.IEnumerator WaitForCamera()
         {
+            // Try to find OVRCameraRig first (Meta XR SDK)
+            OVRCameraRig ovrRig = FindFirstObjectByType<OVRCameraRig>();
+            if (ovrRig != null && ovrRig.centerEyeAnchor != null)
+            {
+                Camera cam = ovrRig.centerEyeAnchor.GetComponent<Camera>();
+                if (cam != null)
+                {
+                    m_Camera = cam;
+                    m_CameraReady = true;
+                    yield break;
+                }
+            }
+
+            // Fallback: Wait for Camera.main
             while (Camera.main == null || Camera.main.transform.forward == Vector3.zero)
                 yield return null;
 
@@ -31,7 +49,7 @@ namespace XRMultiplayer
             if (!m_CameraReady || m_Camera == null)
                 return;
 
-            // Target position in front of the camera
+            // Target position in front of the camera with offset
             Vector3 targetPos =
                 m_Camera.transform.position +
                 m_Camera.transform.forward * positionOffset.z +

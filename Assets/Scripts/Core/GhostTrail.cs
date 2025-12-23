@@ -12,26 +12,32 @@ public class GhostTrail : MonoBehaviour
     public Material trailMaterial;
     
     [Tooltip("Width of the trail at the start")]
-    public float startWidth = 0.5f;
+    public float startWidth = 0.3f;
     
     [Tooltip("Width of the trail at the end")]
-    public float endWidth = 0.1f;
+    public float endWidth = 0.05f;
     
     [Tooltip("How long the trail persists (seconds)")]
-    public float time = 2f;
+    public float time = 1.5f;
     
     [Tooltip("Color gradient for the trail")]
     public Gradient colorGradient;
     
     [Tooltip("Minimum distance before trail adds a new point")]
-    public float minVertexDistance = 0.1f;
+    public float minVertexDistance = 0.05f;
     
     [Header("Ghostly Effect")]
     [Tooltip("Enable automatic material setup with ghostly properties")]
     public bool autoSetupMaterial = true;
     
     [Tooltip("Base color for the ghost trail")]
-    public Color trailColor = new Color(1f, 1f, 1f, 0.5f);
+    public Color trailColor = new Color(0.4f, 0.9f, 1f, 0.3f);
+    
+    [Tooltip("Use smooth tapering for better appearance")]
+    public bool useSmoothTaper = true;
+    
+    [Tooltip("Use additive blending for more ethereal/ghostly effect")]
+    public bool useAdditiveBlending = true;
     
     private TrailRenderer trailRenderer;
     
@@ -53,6 +59,29 @@ public class GhostTrail : MonoBehaviour
         trailRenderer.autodestruct = false;
         trailRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         trailRenderer.receiveShadows = false;
+        
+        // Smooth tapering for better appearance
+        if (useSmoothTaper)
+        {
+            AnimationCurve widthCurve = new AnimationCurve();
+            widthCurve.AddKey(0.0f, 1.0f);  // Full width at start
+            widthCurve.AddKey(0.7f, 0.4f);  // Taper down
+            widthCurve.AddKey(1.0f, 0.0f);  // Zero at end
+            
+            // Smooth the curve
+            for (int i = 0; i < widthCurve.keys.Length; i++)
+            {
+                widthCurve.SmoothTangents(i, 0.5f);
+            }
+            
+            trailRenderer.widthCurve = widthCurve;
+        }
+        
+        // Better quality settings
+        trailRenderer.numCornerVertices = 5;
+        trailRenderer.numCapVertices = 5;
+        trailRenderer.alignment = LineAlignment.View;
+        trailRenderer.textureMode = LineTextureMode.Stretch;
         
         // Setup material
         if (trailMaterial != null)
@@ -80,17 +109,54 @@ public class GhostTrail : MonoBehaviour
     
     void CreateDefaultMaterial()
     {
-        // Create a simple unlit material for the trail
-        Material mat = new Material(Shader.Find("Unlit/Transparent"));
-        mat.color = trailColor;
-        mat.SetFloat("_Mode", 3); // Transparent mode
-        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        // Try URP/Lit shader for better quality
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+        {
+            shader = Shader.Find("Unlit/Transparent");
+        }
+        
+        Material mat = new Material(shader);
+        
+        // Configure transparency with additive blending for ghostly effect
+        mat.SetFloat("_Surface", 1); // Transparent
+        
+        if (useAdditiveBlending)
+        {
+            // Additive blending - more ethereal/ghostly
+            mat.SetFloat("_Blend", 1); // Additive
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        }
+        else
+        {
+            // Normal alpha blending
+            mat.SetFloat("_Blend", 0); // Alpha
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        }
+        
         mat.SetInt("_ZWrite", 0);
-        mat.DisableKeyword("_ALPHATEST_ON");
-        mat.EnableKeyword("_ALPHABLEND_ON");
-        mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        mat.SetFloat("_AlphaClip", 0);
         mat.renderQueue = 3000;
+        
+        // Set colors - make more transparent
+        mat.SetColor("_BaseColor", trailColor);
+        mat.SetColor("_Color", trailColor);
+        
+        // Add glow for ethereal effect
+        Color emissionColor = new Color(
+            trailColor.r * 1.5f,
+            trailColor.g * 1.5f,
+            trailColor.b * 1.5f
+        );
+        mat.SetColor("_EmissionColor", emissionColor);
+        mat.EnableKeyword("_EMISSION");
+        
+        // Smooth and less metallic for softer look
+        mat.SetFloat("_Smoothness", 0.3f);
+        mat.SetFloat("_Metallic", 0f);
+        mat.SetFloat("_ReceiveShadows", 0);
         
         trailRenderer.material = mat;
     }

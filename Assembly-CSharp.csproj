@@ -73,6 +73,7 @@
     <Compile Include="Assets\Scripts\Systems\PerformanceMonitor.cs" />
     <Compile Include="Assets\Scripts\Systems\PauseManager.cs" />
     <Compile Include="Assets\Scripts\Debug\OnScreenDebugDisplay.cs" />
+    <Compile Include="Assets\Scripts\UI\RayVisualController.cs" />
     <Compile Include="Assets\Scripts\UI\MRUIConfigurator.cs" />
     <Compile Include="Assets\Scripts\Unused\StartMenuPanelPlacement.cs" />
     <Compile Include="Assets\Scripts\Unused\EmergencyMetaSDKFix.cs" />
@@ -105,6 +106,7 @@
     <Compile Include="Assets\Scripts\Unused\MetaSDKFix.cs" />
     <Compile Include="Assets\Scripts\Core\GhostSpawner.cs" />
     <Compile Include="Assets\Scripts\MR_XR\SimpleRoomOccluder.cs" />
+    <Compile Include="Assets\Scripts\MR_XR\ControllerModelHider.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaXRProjectFixer.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextInfoDebugTool.cs" />
     <Compile Include="Assets\Scripts\Debug\AndroidBuildConfigurator.cs" />
