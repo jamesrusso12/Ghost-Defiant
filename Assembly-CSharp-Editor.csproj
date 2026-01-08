@@ -61,7 +61,9 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.2.12f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Editor\WavUtility.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Editor\ReadmeEditor.cs" />
+    <Compile Include="Assets\Editor\AudioEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\QuickBuildHelper.cs" />
     <Compile Include="Assets\Scripts\Editor\ModelOptimizationChecker.cs" />
   </ItemGroup>

@@ -4,14 +4,34 @@ using System.Collections;
 using System.Collections.Generic;
 using Meta.XR.MRUtilityKit;
 
+/// <summary>
+/// Ghost AI that wanders around the room, explores furniture, and reacts to player attention.
+/// 
+/// Key Behaviors:
+/// - Wanders independently around the room using NavMesh
+/// - Explores furniture and objects (beds, tables, couches)
+/// - Freezes for 2 seconds when player looks directly at it
+/// - After freezing, runs away and hides behind objects or away from player
+/// - Performs lively behaviors when near player (circling, darting)
+/// - Uses spatial audio for idle, movement, shocked, and death sounds
+/// 
+/// Setup in Unity:
+/// 1. Assign playerEyeTransform to the CenterEyeAnchor (or camera) for accurate eye contact detection
+/// 2. Set lineOfSightMask to exclude UI layers and other non-blocking layers
+/// 3. Tune detectionFreezeTime (default 2 seconds) for desired freeze duration
+/// 4. Adjust playerFOVAngle (default 45 degrees) for detection sensitivity
+/// </summary>
 public class Ghost : MonoBehaviour, IPooledObject
 {
     [Header("Ghost Settings")]
     public Animator animator;
-    public float speed = 1f;
+    [Tooltip("Base movement speed - increase for faster ghosts")]
+    public float speed = 2.5f;
     public float roamRadius = 5f;
     public float roamInterval = 2f;
     public float detectionRange = 5f;
+    [Tooltip("Height offset to make ghost appear to hover above ground")]
+    public float hoverHeight = 0.3f;
     
     [Header("Room Exploration")]
     [Tooltip("How much ghosts prefer to explore furniture/objects (0-1, higher = more curious)")]
@@ -23,18 +43,17 @@ public class Ghost : MonoBehaviour, IPooledObject
     public float maxExploreTime = 5f;
     
     [Header("Hiding Behavior")]
-    [Tooltip("Distance at which ghost will try to hide from player")]
+    [Tooltip("Distance at which ghost will react when player looks at it")]
     public float hideDistance = 8f;
-    [Tooltip("Field of view angle (degrees) - ghost hides if player is looking at it within this angle")]
+    [Tooltip("Field of view angle (degrees) - ghost detects if player is looking within this angle")]
     public float playerFOVAngle = 45f;
-    [Tooltip("Speed multiplier when hiding")]
+    [Tooltip("How long ghost freezes when player makes eye contact (seconds)")]
+    public float detectionFreezeTime = 2f;
+    [Tooltip("Speed multiplier when running away after being detected")]
     public float hideSpeedMultiplier = 2f;
     [Tooltip("Minimum distance to maintain from player when hiding")]
     public float minHideDistance = 4f;
-    [Tooltip("How long ghost pauses when detected (seconds) - random between min and max")]
-    public float detectionPauseTimeMin = 2f;
-    public float detectionPauseTimeMax = 5f;
-    [Tooltip("Layer mask for line-of-sight detection")]
+    [Tooltip("Layer mask for line-of-sight detection (set in Unity to exclude UI, etc.)")]
     public LayerMask lineOfSightMask = -1;
     
     [Header("Lively Behavior")]
@@ -45,38 +64,69 @@ public class Ghost : MonoBehaviour, IPooledObject
     [Tooltip("Time between lively behavior actions")]
     public float livelyActionInterval = 2f;
 
-    [Header("References")]
-    public GameObject player;
-    public Transform attackPoint;
+    [Header("Debug")]
+    [Tooltip("Enable detailed logging for build testing (shows detection events, freeze timing, etc.)")]
+    public bool enableDebugLogging = false;
     
     [Header("Audio")]
-    [Tooltip("Ambient/wandering sound that plays while ghost is roaming")]
-    public AudioClip wanderingSound;
-    [Tooltip("Shocked sound when player makes eye contact")]
-    public AudioClip shockedSound;
-    [Tooltip("Idle ambient sound")]
+    [Tooltip("Idle loop (plays when the ghost is not moving)")]
     public AudioClip idleSound;
-    [Tooltip("Moving/wandering sound")]
+
+    [Tooltip("Movement loop (plays when the ghost is moving).")]
     public AudioClip movingSound;
-    [Tooltip("Volume for wandering sound (0-1)")]
+
+    [Tooltip("Plays once when the ghost dies")]
+    public AudioClip deathSound;
+
+    [Tooltip("Shocked sound when player makes eye contact (one-shot, optional)")]
+    public AudioClip shockedSound;
+
+    [Header("Audio Levels")]
+    [Tooltip("Volume for idle loop (0-1)")]
     [Range(0f, 1f)]
-    public float wanderingVolume = 0.5f;
+    public float idleVolume = 0.18f;
+
+    [Tooltip("Volume for movement loop (0-1).")]
+    [Range(0f, 1f)]
+    public float movingVolume = 0.45f;
+
     [Tooltip("Volume for shocked sound (0-1)")]
     [Range(0f, 1f)]
     public float shockedVolume = 0.7f;
+
+    [Tooltip("Volume for death sound (0-1)")]
+    [Range(0f, 1f)]
+    public float deathVolume = 0.85f;
+
     [Tooltip("Minimum time between shocked sounds (prevents spam)")]
     public float shockedSoundCooldown = 2f;
 
+    [Tooltip("How fast the agent must be moving before we consider the ghost 'moving' for audio")]
+    public float movementSpeedThreshold = 0.12f;
+
+    [Header("Animation")]
+    [Tooltip("If enabled, the script will drive locomotion bools (IsMoving/IsIdle). Leave OFF if you only use Idle + Death for now.")]
+    public bool driveLocomotionBools = false;
+
+    // Auto-detected references (no manual assignment needed)
+    private GameObject player;
+    private Transform playerEyeTransform;
+    private Camera playerCamera;
+    
+    // Component references
     private NavMeshAgent agent;
-    private AudioSource ambientAudioSource;
-    private AudioSource shockedAudioSource;
+    private AudioSource sfxSource;
+    
+    // Behavior state
     private float lastShockedSoundTime = 0f;
-    private bool wasWandering = false;
     private float roamTimer = 0f;
     private bool isDead = false;
     private bool isHiding = false;
     private bool isReactingToDetection = false;
-    private Camera playerCamera;
+    private Coroutine reactionCoroutine = null;
+    private float freezeStartTime = 0f;
+    
+    // Room exploration
     private MRUKRoom currentRoom;
     private Vector3 roomCenter;
     private Bounds roomBounds;
@@ -88,62 +138,139 @@ public class Ghost : MonoBehaviour, IPooledObject
     private bool isExploring = false;
     private string currentAnimationState = "Idle";
 
+    private enum LoopState
+    {
+        None,
+        Idle,
+        Moving
+    }
+
+    private LoopState currentLoopState = LoopState.None;
+
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+
+        // Allow animator to live on a child "visual" object so we can animate bobbing/materials
+        // without fighting the NavMeshAgent-driven root transform.
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>(true);
+        }
         
-        // Setup audio sources
-        SetupAudioSources();
+        // IMPORTANT: This ghost is driven by NavMeshAgent + script movement.
+        // Root motion can override transform movement and make the ghost look "stuck".
+        if (animator != null)
+        {
+            animator.applyRootMotion = false;
+        }
+        
+        // Setup audio (reuse existing AudioSource on prefab if present)
+        SetupAudioSource();
     }
     
-    void SetupAudioSources()
+    void SetupAudioSource()
     {
-        // Create ambient audio source for wandering sound (looping)
-        ambientAudioSource = gameObject.AddComponent<AudioSource>();
-        ambientAudioSource.clip = wanderingSound;
-        ambientAudioSource.volume = wanderingVolume;
-        ambientAudioSource.loop = true;
-        ambientAudioSource.spatialBlend = 1f; // 3D sound
-        ambientAudioSource.rolloffMode = AudioRolloffMode.Logarithmic;
-        ambientAudioSource.minDistance = 2f;
-        ambientAudioSource.maxDistance = 15f;
-        ambientAudioSource.playOnAwake = false;
-        
-        // Create shocked audio source (one-shot)
-        shockedAudioSource = gameObject.AddComponent<AudioSource>();
-        shockedAudioSource.clip = shockedSound;
-        shockedAudioSource.volume = shockedVolume;
-        shockedAudioSource.loop = false;
-        shockedAudioSource.spatialBlend = 1f; // 3D sound
-        shockedAudioSource.rolloffMode = AudioRolloffMode.Logarithmic;
-        shockedAudioSource.minDistance = 2f;
-        shockedAudioSource.maxDistance = 15f;
-        shockedAudioSource.playOnAwake = false;
+        sfxSource = GetComponent<AudioSource>();
+        if (sfxSource == null)
+        {
+            sfxSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // Default 3D settings for the ghost's audio
+        sfxSource.playOnAwake = false;
+        sfxSource.loop = false; // we’ll enable loop only for idle/move loops
+        sfxSource.spatialBlend = 1f; // 3D sound
+        sfxSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        sfxSource.minDistance = 2f;
+        sfxSource.maxDistance = 15f;
+        sfxSource.dopplerLevel = 0f;
     }
 
     void Start()
     {
+        FindPlayerReferences();
+        InitializeAgent();
+        InitializeRoomData();
+        PickNewRoamPosition();
+    }
+    
+    void FindPlayerReferences()
+    {
+        // Auto-find player using tag (no manual assignment needed)
         if (player == null)
+        {
             player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null)
+            {
+                Debug.LogError("[Ghost] No GameObject with 'Player' tag found! Ghost will not function properly.");
+                return;
+            }
+            
+            if (enableDebugLogging)
+                Debug.Log($"[Ghost] Found player: {player.name}");
+        }
 
-        // Find player camera (usually MainCamera or CameraRig)
-        if (player != null)
+        // Auto-find camera (try multiple common locations)
+        if (playerCamera == null && player != null)
         {
             playerCamera = player.GetComponentInChildren<Camera>();
             if (playerCamera == null)
                 playerCamera = Camera.main;
+                
+            if (enableDebugLogging && playerCamera != null)
+                Debug.Log($"[Ghost] Found camera: {playerCamera.name}");
         }
 
+        // Auto-find eye transform for accurate detection
+        if (playerEyeTransform == null && player != null)
+        {
+            // Try common VR eye anchor names
+            playerEyeTransform = FindTransformByName(player.transform, "CenterEyeAnchor");
+            
+            if (playerEyeTransform == null)
+                playerEyeTransform = FindTransformByName(player.transform, "Main Camera");
+                
+            if (playerEyeTransform == null)
+                playerEyeTransform = FindTransformByName(player.transform, "Camera");
+            
+            // Fallback to camera transform
+            if (playerEyeTransform == null && playerCamera != null)
+                playerEyeTransform = playerCamera.transform;
+            
+            if (enableDebugLogging && playerEyeTransform != null)
+                Debug.Log($"[Ghost] Auto-detected eye transform: {playerEyeTransform.name}");
+        }
+    }
+    
+    void InitializeAgent()
+    {
         if (agent != null)
         {
             agent.speed = speed;
-            agent.updateRotation = false; // We'll handle rotation
-            agent.updatePosition = false; // We'll handle smooth movement
+            agent.updateRotation = false; // Manual rotation control
+            agent.updatePosition = false; // Manual position control for smoothness
+            agent.baseOffset = hoverHeight; // Make ghost hover above ground
+            
+            if (enableDebugLogging)
+                Debug.Log($"[Ghost] Agent initialized - Speed: {speed}, Hover: {hoverHeight}");
         }
-
-        // Initialize room data for wandering
-        InitializeRoomData();
-        PickNewRoamPosition();
+    }
+    
+    // Helper function to recursively find a transform by name
+    Transform FindTransformByName(Transform parent, string name)
+    {
+        if (parent.name == name)
+            return parent;
+            
+        foreach (Transform child in parent)
+        {
+            Transform result = FindTransformByName(child, name);
+            if (result != null)
+                return result;
+        }
+        
+        return null;
     }
     
     void InitializeRoomData()
@@ -250,7 +377,22 @@ public class Ghost : MonoBehaviour, IPooledObject
 
     void Update()
     {
-        if (agent == null || !agent.isOnNavMesh || !agent.enabled || player == null || isDead) return;
+        if (agent == null || !agent.enabled || player == null || isDead) return;
+
+        // If something (often animation/root motion) nudges the ghost off the NavMesh,
+        // the agent stops updating and the ghost appears frozen. Try to recover gracefully.
+        if (!agent.isOnNavMesh)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(transform.position, out hit, 2f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+            else
+            {
+                return;
+            }
+        }
 
         roamTimer += Time.deltaTime;
 
@@ -265,26 +407,49 @@ public class Ghost : MonoBehaviour, IPooledObject
         float distanceToPlayer = cachedDistanceToPlayer;
         bool playerLookingAtGhost = cachedPlayerLookingAtGhost;
         
-        // React to being looked at - pause and face player, then run away
-        if (playerLookingAtGhost && distanceToPlayer <= hideDistance && !isReactingToDetection)
+        // React to being looked at - freeze, face player, then run away
+        if (playerLookingAtGhost && distanceToPlayer <= hideDistance && !isReactingToDetection && !isHiding && reactionCoroutine == null)
         {
+            if (enableDebugLogging)
+                Debug.Log($"[Ghost] Player detected! Distance: {distanceToPlayer:F1}m, Starting freeze reaction");
+            
             // Play shocked sound when eye contact is made
             PlayShockedSound();
-            StartCoroutine(ReactToDetection());
+            reactionCoroutine = StartCoroutine(ReactToDetection());
         }
         // Hiding behavior: continue hiding after reaction
         else if (isHiding)
         {
             agent.speed = speed * hideSpeedMultiplier;
-            // Continue hiding if still being looked at
-            if (playerLookingAtGhost)
+            
+            // Check if we've reached hiding destination or far enough from player
+            if (agent.remainingDistance <= 0.5f || distanceToPlayer > hideDistance * 1.5f)
             {
+                // Successfully hidden, resume normal behavior
+                isHiding = false;
+                agent.speed = speed;
+                
+                if (enableDebugLogging)
+                    Debug.Log($"[Ghost] Finished hiding, resuming normal behavior");
+            }
+            // Continue hiding if still being looked at and close
+            else if (playerLookingAtGhost && distanceToPlayer < hideDistance)
+            {
+                HideFromPlayer();
+            }
+            else if (distanceToPlayer < hideDistance * 0.8f)
+            {
+                // Still too close, keep hiding
                 HideFromPlayer();
             }
             else
             {
-                // Player stopped looking, resume normal behavior
+                // Player stopped looking and we're far enough, resume normal behavior
                 isHiding = false;
+                agent.speed = speed;
+                
+                if (enableDebugLogging)
+                    Debug.Log($"[Ghost] Player no longer looking, resuming normal behavior");
             }
         }
         // Lively behavior when near player
@@ -298,13 +463,6 @@ public class Ghost : MonoBehaviour, IPooledObject
         {
             isHiding = false;
             agent.speed = speed;
-            
-            // Play wandering sound if not already playing
-            if (!wasWandering)
-            {
-                PlayWanderingSound();
-                wasWandering = true;
-            }
             
             // Handle exploration behavior
             if (isExploring)
@@ -346,13 +504,9 @@ public class Ghost : MonoBehaviour, IPooledObject
                 }
             }
         }
-        
-        // Stop wandering sound when hiding or reacting
-        if ((isHiding || isReactingToDetection) && wasWandering)
-        {
-            StopWanderingSound();
-            wasWandering = false;
-        }
+
+        // Update idle/move loop audio based on current motion/state
+        UpdateLoopAudio();
 
         // Smooth follow agent path
         Vector3 targetPos = agent.nextPosition;
@@ -367,11 +521,16 @@ public class Ghost : MonoBehaviour, IPooledObject
         
         // Update animation state based on movement
         UpdateAnimationState();
+
+        // Keep the agent in sync with our transform since agent.updatePosition=false.
+        // This prevents drift/desync that can eventually cause !agent.isOnNavMesh and freezing.
+        agent.nextPosition = transform.position;
     }
     
     void UpdateAnimationState()
     {
         if (animator == null) return;
+        if (!driveLocomotionBools) return;
         
         // Determine current state
         string newState = "Idle";
@@ -405,11 +564,17 @@ public class Ghost : MonoBehaviour, IPooledObject
     
     bool IsPlayerLookingAtGhost()
     {
-        if (playerCamera == null || player == null) return false;
+        if (player == null) return false;
         
-        // Calculate direction from player camera to ghost
-        Vector3 directionToGhost = (transform.position - playerCamera.transform.position).normalized;
-        Vector3 playerForward = playerCamera.transform.forward;
+        // Use playerEyeTransform if assigned, otherwise fall back to playerCamera
+        Transform eyeTransform = playerEyeTransform != null ? playerEyeTransform : (playerCamera != null ? playerCamera.transform : null);
+        
+        if (eyeTransform == null) return false;
+        
+        // Calculate direction from player's eye to ghost
+        Vector3 eyePosition = eyeTransform.position;
+        Vector3 directionToGhost = (transform.position - eyePosition).normalized;
+        Vector3 playerForward = eyeTransform.forward;
         
         // Calculate angle between player's view direction and direction to ghost
         float angle = Vector3.Angle(playerForward, directionToGhost);
@@ -419,11 +584,11 @@ public class Ghost : MonoBehaviour, IPooledObject
             return false;
         
         // Perform raycast to check for direct line of sight
-        float distanceToGhost = Vector3.Distance(playerCamera.transform.position, transform.position);
+        float distanceToGhost = Vector3.Distance(eyePosition, transform.position);
         RaycastHit hit;
         
-        // Raycast from player camera to ghost
-        if (Physics.Raycast(playerCamera.transform.position, directionToGhost, out hit, distanceToGhost, lineOfSightMask))
+        // Raycast from player's eye to ghost
+        if (Physics.Raycast(eyePosition, directionToGhost, out hit, distanceToGhost, lineOfSightMask))
         {
             // Check if the raycast hit the ghost
             if (hit.collider.gameObject == gameObject || hit.collider.transform.IsChildOf(transform))
@@ -437,11 +602,15 @@ public class Ghost : MonoBehaviour, IPooledObject
     
     IEnumerator ReactToDetection()
     {
+        if (enableDebugLogging)
+            Debug.Log($"[Ghost] FREEZE START - Duration: {detectionFreezeTime}s");
+        
+        freezeStartTime = Time.time;
         isReactingToDetection = true;
         agent.isStopped = true;
         
-        // Stop wandering sound when detected
-        StopWanderingSound();
+        // Silence loops briefly so the shocked sound reads clearly
+        StopLoopAudio();
         
         // Play shocked animation if available
         if (animator != null)
@@ -449,46 +618,113 @@ public class Ghost : MonoBehaviour, IPooledObject
             animator.SetTrigger("Shocked");
         }
         
-        // Face the player
-        Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
-        directionToPlayer.y = 0; // Keep horizontal
-        Quaternion lookAtPlayer = Quaternion.LookRotation(directionToPlayer);
-        
-        // Random pause time between min and max
-        float pauseDuration = Random.Range(detectionPauseTimeMin, detectionPauseTimeMax);
-        float pauseTimer = 0f;
-        
-        while (pauseTimer < pauseDuration)
+        // Use WaitForSeconds for accurate timing instead of manual timer
+        float elapsed = 0f;
+        while (elapsed < detectionFreezeTime)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookAtPlayer, Time.deltaTime * 8f);
-            pauseTimer += Time.deltaTime;
+            // Face the player's eye position during freeze
+            if (player != null)
+            {
+                Transform eyeTransform = playerEyeTransform != null ? playerEyeTransform : 
+                                       (playerCamera != null ? playerCamera.transform : player.transform);
+                Vector3 targetPosition = eyeTransform.position;
+                
+                Vector3 directionToPlayer = (targetPosition - transform.position);
+                directionToPlayer.y = 0; // Keep horizontal
+                
+                if (directionToPlayer.sqrMagnitude > 0.01f)
+                {
+                    Quaternion lookAtPlayer = Quaternion.LookRotation(directionToPlayer.normalized);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, lookAtPlayer, Time.deltaTime * 10f);
+                }
+            }
+            
+            elapsed += Time.deltaTime;
             yield return null;
         }
         
-        // Now run away and hide
+        // Double-check timing for accuracy
+        float actualFreezeTime = Time.time - freezeStartTime;
+        if (enableDebugLogging)
+            Debug.Log($"[Ghost] FREEZE END - Actual duration: {actualFreezeTime:F2}s, Started running away");
+        
+        // Freeze time is over - now run away and hide!
         isReactingToDetection = false;
         isHiding = true;
         agent.isStopped = false;
         agent.speed = speed * hideSpeedMultiplier;
+        reactionCoroutine = null; // Clear coroutine reference
         HideFromPlayer();
     }
-    
-    void PlayWanderingSound()
+
+    void UpdateLoopAudio()
     {
-        if (ambientAudioSource != null && wanderingSound != null && !ambientAudioSource.isPlaying)
+        if (sfxSource == null) return;
+
+        // Don’t run loops while reacting; let the one-shot read clearly
+        if (isDead || isReactingToDetection)
         {
-            ambientAudioSource.clip = wanderingSound;
-            ambientAudioSource.volume = wanderingVolume;
-            ambientAudioSource.Play();
+            StopLoopAudio();
+            return;
         }
+
+        bool isMovingNow = agent != null && agent.enabled && agent.desiredVelocity.sqrMagnitude > (movementSpeedThreshold * movementSpeedThreshold);
+
+        AudioClip desiredClip = null;
+        float desiredVolume = 0f;
+        LoopState desiredState = LoopState.None;
+
+        if (isMovingNow)
+        {
+            desiredClip = movingSound;
+            desiredState = desiredClip != null ? LoopState.Moving : LoopState.None;
+            desiredVolume = movingVolume;
+        }
+        else
+        {
+            desiredClip = idleSound;
+            desiredState = desiredClip != null ? LoopState.Idle : LoopState.None;
+            desiredVolume = idleVolume;
+        }
+
+        // Stop if we have nothing to play
+        if (desiredState == LoopState.None || desiredClip == null)
+        {
+            StopLoopAudio();
+            return;
+        }
+
+        // If already playing the right loop, just ensure volume
+        if (currentLoopState == desiredState && sfxSource.isPlaying && sfxSource.clip == desiredClip && sfxSource.loop)
+        {
+            sfxSource.volume = desiredVolume;
+            return;
+        }
+
+        // Switch loops
+        sfxSource.Stop();
+        sfxSource.clip = desiredClip;
+        sfxSource.loop = true;
+        sfxSource.volume = desiredVolume;
+        sfxSource.Play();
+
+        currentLoopState = desiredState;
     }
-    
-    void StopWanderingSound()
+
+    void StopLoopAudio()
     {
-        if (ambientAudioSource != null && ambientAudioSource.isPlaying)
+        if (sfxSource == null) return;
+
+        if (sfxSource.isPlaying && sfxSource.loop)
         {
-            ambientAudioSource.Stop();
+            sfxSource.Stop();
         }
+        if (sfxSource.loop)
+        {
+            sfxSource.loop = false;
+        }
+        sfxSource.clip = null;
+        currentLoopState = LoopState.None;
     }
     
     void PlayShockedSound()
@@ -497,10 +733,18 @@ public class Ghost : MonoBehaviour, IPooledObject
         if (Time.time - lastShockedSoundTime < shockedSoundCooldown)
             return;
             
-        if (shockedAudioSource != null && shockedSound != null)
+        if (sfxSource != null && shockedSound != null)
         {
-            shockedAudioSource.PlayOneShot(shockedSound, shockedVolume);
+            sfxSource.PlayOneShot(shockedSound, shockedVolume);
             lastShockedSoundTime = Time.time;
+        }
+    }
+
+    void PlayDeathSound()
+    {
+        if (sfxSource != null && deathSound != null)
+        {
+            sfxSource.PlayOneShot(deathSound, deathVolume);
         }
     }
     
@@ -711,12 +955,9 @@ public class Ghost : MonoBehaviour, IPooledObject
         isDead = true;
         if (agent != null) agent.enabled = false;
         
-        // Stop all audio when ghost dies
-        StopWanderingSound();
-        if (shockedAudioSource != null && shockedAudioSource.isPlaying)
-        {
-            shockedAudioSource.Stop();
-        }
+        // Stop loops + play death one-shot
+        StopLoopAudio();
+        PlayDeathSound();
 
         if (animator != null)
             animator.SetTrigger("Death");
@@ -750,34 +991,29 @@ public class Ghost : MonoBehaviour, IPooledObject
         isDead = false;
         isHiding = false;
         isReactingToDetection = false;
+        reactionCoroutine = null;
+        freezeStartTime = 0f;
         roamTimer = 0f;
         lastLivelyActionTime = 0f;
-        wasWandering = false;
         lastShockedSoundTime = 0f;
+        currentLoopState = LoopState.None;
         
         // Stop any audio that might be playing
-        StopWanderingSound();
-        if (shockedAudioSource != null && shockedAudioSource.isPlaying)
-        {
-            shockedAudioSource.Stop();
-        }
+        StopLoopAudio();
         
+        // Re-find player references (in case they changed)
+        FindPlayerReferences();
+        
+        // Re-initialize agent
         if (agent != null)
         {
             agent.enabled = true;
             agent.speed = speed;
             agent.isStopped = false;
-        }
-
-        if (player == null)
-            player = GameObject.FindGameObjectWithTag("Player");
-        
-        // Find player camera
-        if (player != null)
-        {
-            playerCamera = player.GetComponentInChildren<Camera>();
-            if (playerCamera == null)
-                playerCamera = Camera.main;
+            agent.baseOffset = hoverHeight;
+            
+            if (enableDebugLogging)
+                Debug.Log($"[Ghost] Spawned/Reset at {transform.position} - Speed: {speed}");
         }
         
         // Reinitialize room data

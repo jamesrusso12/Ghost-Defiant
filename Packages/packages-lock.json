@@ -21,7 +21,7 @@
     },
     "com.meta.xr.sdk.core": {
       "version": "83.0.1",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -37,7 +37,7 @@
     },
     "com.meta.xr.sdk.interaction": {
       "version": "83.0.1",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {
         "com.unity.ugui": "1.0.0",

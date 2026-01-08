@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 3678684287447635248}
   - component: {fileID: -3271910279091585899}
   - component: {fileID: 1759620994715034583}
-  - component: {fileID: 3866760241164062706}
   - component: {fileID: -894524588062174275}
   m_Layer: 6
   m_Name: Ghost
@@ -29,12 +28,11 @@ Transform:
   m_GameObject: {fileID: 1303794907754347782}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.10983, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.80555, y: 0.80555, z: 0.80555}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8735370081244678971}
-  - {fileID: 9153449935402043657}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &-3271910279091585899
@@ -49,20 +47,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6f4432cd8dfce544ba26eda0c8904b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 3866760241164062706}
+  animator: {fileID: 4930012848831982890}
   speed: 1
   roamRadius: 3
   roamInterval: 2
   detectionRange: 5
+  hoverHeight: 1
   explorationCuriosity: 0.7
   minExploreTime: 2
   maxExploreTime: 5
   hideDistance: 8
   playerFOVAngle: 60
+  detectionFreezeTime: 2
   hideSpeedMultiplier: 1.5
   minHideDistance: 4
-  detectionPauseTimeMin: 2
-  detectionPauseTimeMax: 5
   lineOfSightMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -70,14 +68,19 @@ MonoBehaviour:
   livelySpeedMultiplier: 1.3
   livelyActionInterval: 2
   player: {fileID: 0}
-  attackPoint: {fileID: 0}
-  wanderingSound: {fileID: 0}
-  shockedSound: {fileID: 0}
+  eyeTransformName: CenterEyeAnchor
+  playerEyeTransform: {fileID: 0}
   idleSound: {fileID: 0}
   movingSound: {fileID: 0}
-  wanderingVolume: 0.5
+  deathSound: {fileID: 8300000, guid: ec0a6bfc7d40c9344bf024f21d70b88b, type: 3}
+  shockedSound: {fileID: 0}
+  idleVolume: 0.18
+  movingVolume: 0.45
   shockedVolume: 0.7
+  deathVolume: 0.85
   shockedSoundCooldown: 2
+  movementSpeedThreshold: 0.12
+  driveLocomotionBools: 0
 --- !u!195 &1759620994715034583
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -100,28 +103,6 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!95 &3866760241164062706
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1303794907754347782}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 1c73853f5c1f3c64b8be5b0b94d1569f, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!82 &-894524588062174275
 AudioSource:
   m_ObjectHideFlags: 0
@@ -134,7 +115,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -245,12 +226,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8222831703744663737}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.9962439, z: 0.08659175, w: 0}
-  m_LocalPosition: {x: 0, y: 0.80899996, z: 0.145}
-  m_LocalScale: {x: 0.20083527, y: 0.21056853, z: 0.15425135}
+  m_LocalRotation: {x: 0.54141784, y: -0.54141784, z: -0.45482606, w: 0.45482606}
+  m_LocalPosition: {x: 0.09666666, y: 0, z: 0.0294}
+  m_LocalScale: {x: 0.1338902, y: 0.14037901, z: 0.10283423}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3678684287447635248}
+  m_Father: {fileID: 8735370081244678971}
   m_LocalEulerAnglesHint: {x: 170.065, y: 0, z: 180}
 --- !u!33 &332515288199912534
 MeshFilter:
@@ -339,7 +320,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.769
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
         type: 3}
@@ -403,7 +384,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9153449935402043657}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
         type: 3}
@@ -417,6 +402,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 2062876397275782058}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4930012848831982890}
   m_SourcePrefab: {fileID: 100100000, guid: 3a3cd868d0630b04eabec7fcfd034f3b, type: 3}
 --- !u!1 &8246535541464125825 stripped
 GameObject:
@@ -608,6 +597,28 @@ MonoBehaviour:
   trailColor: {r: 0.4, g: 0.9, b: 1, a: 0.3}
   useSmoothTaper: 1
   useAdditiveBlending: 1
+--- !u!95 &4930012848831982890
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8246535541464125825}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 1c73853f5c1f3c64b8be5b0b94d1569f, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!4 &8735370081244678971 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,

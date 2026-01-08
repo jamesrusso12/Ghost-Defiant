@@ -7,7 +7,6 @@ using System.IO;
 using System.Reflection;
 
 [CustomEditor(typeof(Readme))]
-[InitializeOnLoad]
 public class ReadmeEditor : UnityEditor.Editor
 {
     static string s_ShowedReadmeSessionStateName = "ReadmeEditor.showedReadme";
@@ -16,10 +15,18 @@ public class ReadmeEditor : UnityEditor.Editor
 
     const float k_Space = 16f;
 
-    static ReadmeEditor()
-    {
-        EditorApplication.delayCall += SelectReadmeAutomatically;
-    }
+    // NOTE:
+    // This file comes from Unity's tutorial/readme template.
+    // In some projects (especially after Unity upgrades), auto-loading a window layout on editor startup
+    // can destabilize or crash the editor. We keep the Readme custom inspector, but disable all
+    // "auto-run on load" behavior so Unity can always open the project.
+    //
+    // If you ever want the old behavior back, you can re-add [InitializeOnLoad] and this static ctor.
+    //
+    // static ReadmeEditor()
+    // {
+    //     EditorApplication.delayCall += SelectReadmeAutomatically;
+    // }
 
     static void RemoveTutorial()
     {

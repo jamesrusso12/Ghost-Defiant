@@ -33,15 +33,35 @@ public class RoomMeshVisualizerDisabler : MonoBehaviour
 #if UNITY_EDITOR
     /// <summary>
     /// Auto-assigns the RoomMeshEvent reference in the Editor when the component is added or modified.
+    /// Wrapped in try-catch to prevent crashes during Unity import/compilation.
     /// </summary>
     private void OnValidate()
     {
-        if (roomMeshEvent == null)
+        // Safety check: Don't run during import/compilation or if Unity isn't ready
+        if (!UnityEditor.EditorApplication.isPlaying && !UnityEditor.EditorApplication.isCompiling)
         {
-            roomMeshEvent = FindAnyObjectByType<RoomMeshEvent>();
-            if (roomMeshEvent != null)
+            try
             {
-                UnityEditor.EditorUtility.SetDirty(this);
+                if (roomMeshEvent == null)
+                {
+                    roomMeshEvent = FindAnyObjectByType<RoomMeshEvent>();
+                    if (roomMeshEvent != null)
+                    {
+                        UnityEditor.EditorUtility.SetDirty(this);
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                // Silently fail during import/compilation to prevent crashes
+                // This is expected behavior when Unity is importing assets
+                if (UnityEditor.EditorApplication.isCompiling || UnityEditor.AssetDatabase.IsAssetImportWorkerProcess())
+                {
+                    // Expected during import - ignore
+                    return;
+                }
+                // Only log if it's an unexpected error
+                Debug.LogWarning($"[RoomMeshVisualizerDisabler] OnValidate failed: {ex.Message}");
             }
         }
     }

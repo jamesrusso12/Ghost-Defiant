@@ -47,6 +47,10 @@ public class GameManager : MonoBehaviour
         instance = this;
     }
 
+    [Header("Game Flow")]
+    [Tooltip("If true, game waits for LoadoutManager to start the rounds. If false, starts immediately.")]
+    public bool enableIntroSequence = true;
+
     private void Start()
     {
         // Find WristUI if not assigned
@@ -59,7 +63,18 @@ public class GameManager : MonoBehaviour
             }
         }
         
+        if (!enableIntroSequence)
+        {
+            StartNextRound();
+        }
+    }
+
+    public void StartGame()
+    {
+        if (!roundActive && currentRound == 0)
+        {
         StartNextRound();
+        }
     }
     
 
