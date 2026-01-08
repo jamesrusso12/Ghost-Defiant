@@ -115,17 +115,46 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
         if (currentComponent == null || segment == null) return;
         if (currentComponent.ReservedSegment == segment) return;
 
-        GameObject segmentToDestroy = segment;
-        if (!segments.Contains(segment))
+        GameObject segmentToDestroy = null;
+
+        // First, check if the hit object is directly in segments list
+        if (segments.Contains(segment))
         {
-            foreach (var seg in segments)
+            segmentToDestroy = segment;
+        }
+        else
+        {
+            // Check if the hit object is a child of a segment
+            Transform current = segment.transform;
+            while (current != null && segmentToDestroy == null)
             {
-                if (seg != null && seg == segment)
+                if (segments.Contains(current.gameObject))
                 {
-                    segmentToDestroy = seg;
+                    segmentToDestroy = current.gameObject;
                     break;
                 }
+                current = current.parent;
             }
+
+            // If still not found, check if any segment is a child of the hit object
+            if (segmentToDestroy == null)
+            {
+                foreach (var seg in segments)
+                {
+                    if (seg != null && seg.transform.IsChildOf(segment.transform))
+                    {
+                        segmentToDestroy = seg;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If we couldn't find a valid segment, log warning and return
+        if (segmentToDestroy == null)
+        {
+            Debug.LogWarning($"[DestructibleGlobalMeshManager] Could not find segment to destroy for hit object: {segment.name}");
+            return;
         }
 
         currentComponent.DestroySegment(segmentToDestroy);

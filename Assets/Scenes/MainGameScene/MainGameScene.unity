@@ -16966,7 +16966,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4081e35c7d9cf444984c88fac5a379aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gunScript: {fileID: 0}
+  gunScript: {fileID: 1516424884}
   meshSpawner: {fileID: 1293433511}
   destroySound: {fileID: 8300000, guid: ec0a6bfc7d40c9344bf024f21d70b88b, type: 3}
   debrisLargePrefab: {fileID: 6033790609030183506, guid: 279b7601e1bac9c4aa9317519988c475,
@@ -19584,6 +19584,26 @@ PrefabInstance:
       propertyPath: shootingButton
       value: 67108864
       objectReference: {fileID: 0}
+    - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
+        type: 3}
+      propertyPath: projectileSpeed
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
+        type: 3}
+      propertyPath: gravityMultiplier
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
+        type: 3}
+      propertyPath: enableDebugLogging
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
+        type: 3}
+      propertyPath: projectileLifetime
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 3694725961590160582, guid: 08cc3401f9867bd4aaf4307faf46963c,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -19738,6 +19758,18 @@ MonoBehaviour:
   _kinematicWhileSelected: 1
   _throwWhenUnselected: 1
   _forceKinematicDisabled: 0
+--- !u!114 &1516424884 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
+    type: 3}
+  m_PrefabInstance: {fileID: 1516424878}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1516424880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 401f2e9fe57ce02408f0b5bfc823f83f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GunScript
 --- !u!1001 &1517652543
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -20382,7 +20414,7 @@ GameObject:
   - component: {fileID: 1558897992}
   - component: {fileID: 1558897991}
   - component: {fileID: 1558897996}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: '[BuildingBlock] Camera Rig'
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -32398,16 +32430,16 @@ MonoBehaviour:
     type: 3}
   minEdgeDistance: 0.3
   spawnLabels: 4
-  normalOffset: 2
+  normalOffset: -2
   spawnTry: 1000
   overrideSpawnY: 1
-  spawnY: 2
+  spawnY: 1.5
   maxAbsNormalOffset: 0.5
   snapToNavMesh: 1
   navMeshSampleRadius: 2
   allowFallbackSpawnNearPlayer: 1
   fallbackRadius: 4
-  debugLogging: 0
+  debugLogging: 1
 --- !u!1001 &1969058486
 PrefabInstance:
   m_ObjectHideFlags: 0
