@@ -1,5 +1,6 @@
 using UnityEngine.Audio;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
@@ -29,6 +30,9 @@ public class AudioManager : MonoBehaviour
     public Sound[] sounds;
     public static AudioManager instance;
 
+    // OPTIMIZATION: Dictionary for O(1) sound lookup instead of O(n) Array.Find
+    private Dictionary<string, Sound> soundDictionary = new Dictionary<string, Sound>();
+
     void Awake()
     {
         // Singleton pattern
@@ -42,6 +46,9 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
+        // Build dictionary for fast lookup
+        soundDictionary.Clear();
+        
         foreach (Sound s in sounds)
         {
             if (s.source == null)
@@ -53,6 +60,12 @@ public class AudioManager : MonoBehaviour
             s.source.pitch = s.pitch;
             s.source.loop = s.loop;
 
+            // Add to dictionary for fast lookup
+            if (s != null && !string.IsNullOrEmpty(s.name))
+            {
+                soundDictionary[s.name] = s;
+            }
+
             if (s.playOnAwake)
                 s.source.Play();
         }
@@ -60,20 +73,23 @@ public class AudioManager : MonoBehaviour
 
     public void Play(string name)
     {
-        Sound s = Array.Find(sounds, sound => sound.name == name);
-        if (s == null)
+        // OPTIMIZATION: O(1) dictionary lookup instead of O(n) Array.Find
+        if (soundDictionary.TryGetValue(name, out Sound s))
+        {
+            s.source.Play();
+        }
+        else
         {
             Debug.LogWarning("Sound: " + name + " not found");
-            return;
         }
-
-        s.source.Play();
     }
 
     public void Stop(string name)
     {
-        Sound s = Array.Find(sounds, sound => sound.name == name);
-        if (s != null)
+        // OPTIMIZATION: O(1) dictionary lookup instead of O(n) Array.Find
+        if (soundDictionary.TryGetValue(name, out Sound s))
+        {
             s.source.Stop();
+        }
     }
 }

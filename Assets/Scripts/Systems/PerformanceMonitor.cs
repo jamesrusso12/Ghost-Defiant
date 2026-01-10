@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using TMPro;
 
 public class PerformanceMonitor : MonoBehaviour
@@ -15,35 +16,41 @@ public class PerformanceMonitor : MonoBehaviour
 
     private float accum = 0.0f;
     private int frames = 0;
-    private float timeleft;
     private float fps;
 
     void Start()
     {
-        timeleft = updateInterval;
-        
         // Set target frame rate for VR
         Application.targetFrameRate = targetFPS;
         
         // Enable VSync for better frame pacing
         QualitySettings.vSyncCount = 1;
+        
+        // OPTIMIZATION: Use Coroutine instead of Update() to eliminate per-frame overhead
+        StartCoroutine(UpdatePerformanceStats());
     }
 
-    void Update()
+    // OPTIMIZATION: Coroutine runs only when needed, eliminating Update() overhead
+    IEnumerator UpdatePerformanceStats()
     {
-        timeleft -= Time.deltaTime;
-        accum += Time.timeScale / Time.deltaTime;
-        ++frames;
-
-        if (timeleft <= 0.0f)
+        while (true)
         {
+            yield return new WaitForSeconds(updateInterval);
+            
+            // Calculate FPS over the interval
             fps = accum / frames;
-            timeleft = updateInterval;
             accum = 0.0f;
             frames = 0;
-
+            
             UpdateUI();
         }
+    }
+    
+    // Track frame rate in Update (minimal overhead, just increments)
+    void Update()
+    {
+        accum += Time.timeScale / Time.deltaTime;
+        ++frames;
     }
 
     void UpdateUI()

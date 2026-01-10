@@ -214,6 +214,9 @@ public class GunScript : MonoBehaviour
 /// </summary>
 public class ProjectileController : MonoBehaviour
 {
+    // OPTIMIZATION: Cache skybox reference to avoid expensive Find() calls on every bullet spawn
+    public static GameObject cachedSkybox = null;
+    
     private float lifetime;
     private float spawnTime;
     private float gravityMultiplier;
@@ -225,9 +228,6 @@ public class ProjectileController : MonoBehaviour
     private bool debugLogging = false;
     private GameObject gunObject;
     private Collider projectileCollider;
-    
-    private const float COLLISION_ENABLE_DELAY = 0.05f; // 50ms delay before enabling collisions
-    private bool collisionEnabled = false;
 
     public void Initialize(float projectileSpeed, float projectileLifetime, float gravity, GameObject impactPrefab, GunScript gun, bool enableDebug = false, GameObject gunGameObject = null)
     {
@@ -241,17 +241,19 @@ public class ProjectileController : MonoBehaviour
         
         rb = GetComponent<Rigidbody>();
         projectileCollider = GetComponent<Collider>();
-        
-        // Disable collider initially to prevent immediate collision
+
+        // Set up collision ignores FIRST before enabling collider
+        SetupCollisionIgnores();
+
+        // Keep collider ENABLED from start - Physics.IgnoreCollision handles gun/player
         if (projectileCollider != null)
         {
-            projectileCollider.enabled = false;
+            projectileCollider.enabled = true;
         }
-        
-        SetupCollisionIgnores();
+
         initialized = true;
-        
-        if (debugLogging) Debug.Log($"[ProjectileController] Initialized. Collider disabled for {COLLISION_ENABLE_DELAY}s");
+
+        if (debugLogging) Debug.Log($"[ProjectileController] Initialized. Collider enabled immediately (using Physics.IgnoreCollision)");
     }
     
     private void SetupCollisionIgnores()
@@ -316,6 +318,28 @@ public class ProjectileController : MonoBehaviour
                 }
             }
         }
+        
+        // CRITICAL FIX: Ignore skybox colliders - bullets should pass through to hit walls
+        // OPTIMIZATION: Cache skybox reference to avoid expensive Find() calls on every bullet spawn
+        if (ProjectileController.cachedSkybox == null)
+        {
+            ProjectileController.cachedSkybox = GameObject.Find("NightSkybox");
+            if (ProjectileController.cachedSkybox == null) ProjectileController.cachedSkybox = GameObject.Find("Skybox");
+            if (ProjectileController.cachedSkybox == null) ProjectileController.cachedSkybox = GameObject.Find("Sky");
+        }
+        
+        if (ProjectileController.cachedSkybox != null)
+        {
+            Collider[] skyboxColliders = ProjectileController.cachedSkybox.GetComponentsInChildren<Collider>();
+            foreach (Collider skyCol in skyboxColliders)
+            {
+                if (skyCol != null)
+                {
+                    Physics.IgnoreCollision(projectileCollider, skyCol, true);
+                    if (debugLogging) Debug.Log($"[ProjectileController] Ignoring skybox collider: {ProjectileController.cachedSkybox.name}");
+                }
+            }
+        }
     }
 
     void FixedUpdate()
@@ -325,17 +349,6 @@ public class ProjectileController : MonoBehaviour
         // Apply custom gravity
         Vector3 gravityForce = Physics.gravity * gravityMultiplier;
         rb.AddForce(gravityForce, ForceMode.Acceleration);
-
-        // Enable collision after delay
-        if (!collisionEnabled && Time.time - spawnTime >= COLLISION_ENABLE_DELAY)
-        {
-            if (projectileCollider != null)
-            {
-                projectileCollider.enabled = true;
-                collisionEnabled = true;
-                if (debugLogging) Debug.Log($"[ProjectileController] Collider enabled at {transform.position}");
-            }
-        }
 
         // Check lifetime
         if (Time.time - spawnTime >= lifetime)
@@ -354,7 +367,6 @@ public class ProjectileController : MonoBehaviour
     void OnCollisionEnter(Collision collision)
     {
         if (hasCollided) return;
-        if (!collisionEnabled) return;
 
         // Ignore gun and player
         if (gunObject != null && (collision.transform.IsChildOf(gunObject.transform) || collision.gameObject == gunObject))
@@ -366,6 +378,14 @@ public class ProjectileController : MonoBehaviour
         if (collision.gameObject.CompareTag("Player"))
         {
             if (debugLogging) Debug.Log($"[ProjectileController] Ignoring player collision: {collision.gameObject.name}");
+            return;
+        }
+
+        // CRITICAL FIX: Ignore skybox collisions - bullets should pass through to hit walls
+        string hitName = collision.gameObject.name.ToLower();
+        if (hitName.Contains("skybox") || hitName.Contains("sky"))
+        {
+            if (debugLogging) Debug.Log($"[ProjectileController] Ignoring skybox collision: {collision.gameObject.name} - bullet passes through");
             return;
         }
 

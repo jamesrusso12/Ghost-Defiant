@@ -41,6 +41,9 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
 
     private List<GameObject> segments = new List<GameObject>();
     private DestructibleMeshComponent currentComponent;
+    
+    // OPTIMIZATION: Dictionary for O(1) segment lookup instead of O(n) linear search
+    private Dictionary<GameObject, GameObject> segmentLookup = new Dictionary<GameObject, GameObject>();
 
     void Awake()
     {
@@ -90,6 +93,9 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
         component.GetDestructibleMeshSegments(segments);
         segments.RemoveAll(s => s == null);
 
+        // OPTIMIZATION: Build dictionary for fast O(1) segment lookup
+        segmentLookup.Clear();
+
         // Standard setup for the wall pieces
         foreach (var item in segments)
         {
@@ -104,10 +110,22 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
 
             MeshFilter mf = item.GetComponent<MeshFilter>();
             if (mf != null) col.sharedMesh = mf.sharedMesh;
+
+            // FORCE all segments to Default layer for guaranteed collision with bullets
+            item.layer = LayerMask.NameToLayer("Default");
             
-            if (item.layer == LayerMask.NameToLayer("Ignore Raycast"))
-                item.layer = LayerMask.NameToLayer("Default");
+            // Add to dictionary for fast lookup
+            segmentLookup[item] = item;
+            
+            // Also add children for fast lookup (in case bullet hits child object)
+            foreach (Transform child in item.transform)
+            {
+                if (child != null)
+                {
+                    segmentLookup[child.gameObject] = item;
+                }
             }
+        }
     }
 
     public void DestroyMeshSegment(GameObject segment)
@@ -117,26 +135,25 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
 
         GameObject segmentToDestroy = null;
 
-        // First, check if the hit object is directly in segments list
-        if (segments.Contains(segment))
+        // OPTIMIZATION: Fast O(1) dictionary lookup first
+        if (segmentLookup.TryGetValue(segment, out segmentToDestroy))
         {
-            segmentToDestroy = segment;
+            // Found it immediately!
         }
         else
         {
-            // Check if the hit object is a child of a segment
+            // Fallback: Check parent hierarchy (for edge cases)
             Transform current = segment.transform;
             while (current != null && segmentToDestroy == null)
             {
-                if (segments.Contains(current.gameObject))
+                if (segmentLookup.TryGetValue(current.gameObject, out segmentToDestroy))
                 {
-                    segmentToDestroy = current.gameObject;
                     break;
                 }
                 current = current.parent;
             }
 
-            // If still not found, check if any segment is a child of the hit object
+            // If still not found, check if any segment is a child of the hit object (rare case)
             if (segmentToDestroy == null)
             {
                 foreach (var seg in segments)

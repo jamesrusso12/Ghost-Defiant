@@ -81,6 +81,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark02.cs" />
     <Compile Include="Assets\Scripts\UI\MenuPointerHelper.cs" />
     <Compile Include="Assets\Scripts\Audio\DebrisAudio.cs" />
+    <Compile Include="Assets\Scripts\Combat\FileLogger.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaSDKComponentFixer.cs" />
     <Compile Include="Assets\Scripts\MR_XR\RoomOcclusionManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_ExampleScript_01.cs" />

@@ -156,8 +156,8 @@ public class OnScreenDebugDisplay : MonoBehaviour
     
     private void HandleLog(string logString, string stackTrace, LogType type)
     {
-        // Only show SimpleRoomOccluder logs
-        if (logString.Contains("SimpleRoomOccluder"))
+        // Show SimpleRoomOccluder AND LoadoutManager logs
+        if (logString.Contains("SimpleRoomOccluder") || logString.Contains("LoadoutManager"))
         {
             string prefix = "";
             Color logColor = Color.green;
