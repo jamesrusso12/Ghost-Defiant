@@ -37,16 +37,18 @@ public class PassthroughMeshConfigurator : MonoBehaviour
         }
     }
     
+    private float lastAlpha = -1f;
+    
     void Update()
     {
         // Runtime debugging toggle
-        if (showMeshForDebugging)
+        float targetAlpha = showMeshForDebugging ? 0.3f : meshAlpha;
+        
+        // Optimization: Only update material properties if alpha changed significantly
+        if (Mathf.Abs(targetAlpha - lastAlpha) > 0.001f)
         {
-            SetMeshAlpha(0.3f);
-        }
-        else
-        {
-            SetMeshAlpha(meshAlpha);
+            SetMeshAlpha(targetAlpha);
+            lastAlpha = targetAlpha;
         }
     }
     

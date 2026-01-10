@@ -948,6 +948,21 @@ public class Ghost : MonoBehaviour, IPooledObject
 
 
 
+    // This is the function the Animation Event will call!
+    public void DestroyGhost()
+    {
+        // Use object pooling if available
+        if (ObjectPool.Instance != null)
+        {
+            ObjectPool.Instance.ReturnToPool("Ghost", gameObject);
+        }
+        else
+        {
+            // Otherwise just destroy it normally
+            Destroy(gameObject);
+        }
+    }
+
     public void Kill()
     {
         if (isDead) return;
@@ -968,15 +983,19 @@ public class Ghost : MonoBehaviour, IPooledObject
             GameManager.instance.GhostKilled();
         }
 
-        // Use object pooling if available, otherwise destroy
-        if (ObjectPool.Instance != null)
-        {
-            StartCoroutine(ReturnToPoolAfterDelay());
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        // --- OLD CODE (DELETE OR COMMENT THIS OUT) ---
+        // if (ObjectPool.Instance != null)
+        // {
+        //    StartCoroutine(ReturnToPoolAfterDelay());
+        // }
+        // else
+        // {
+        //    Destroy(gameObject);
+        // }
+        // ---------------------------------------------
+
+        // We do NOTHING here now. 
+        // We wait for the Animation Event to call DestroyGhost()!
     }
 
     private IEnumerator ReturnToPoolAfterDelay()

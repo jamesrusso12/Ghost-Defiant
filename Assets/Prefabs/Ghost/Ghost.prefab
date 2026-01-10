@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1759620994715034583}
   - component: {fileID: -894524588062174275}
   - component: {fileID: 1353187946562864899}
+  - component: {fileID: 6733308147934377481}
   m_Layer: 6
   m_Name: Ghost
   m_TagString: Enemy
@@ -49,7 +50,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6f4432cd8dfce544ba26eda0c8904b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 4930012848831982890}
+  animator: {fileID: 0}
   speed: 4
   roamRadius: 3
   roamInterval: 2
@@ -219,10 +220,32 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.20698436
-  m_Height: 0.41396868
+  m_Radius: 0.21599679
+  m_Height: 0.43199357
   m_Direction: 2
-  m_Center: {x: -0.00084192347, y: -0.05054552, z: 0}
+  m_Center: {x: -0.00084186794, y: 0.9477129, z: 0.004212984}
+--- !u!95 &6733308147934377481
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1303794907754347782}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 1c73853f5c1f3c64b8be5b0b94d1569f, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &2561703379026614994
 GameObject:
   m_ObjectHideFlags: 0
@@ -250,7 +273,7 @@ Transform:
   m_GameObject: {fileID: 2561703379026614994}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: -0.18558748, y: 0.234, z: 0.566}
+  m_LocalPosition: {x: -239.1, y: -56.3, z: -91.8}
   m_LocalScale: {x: 1.2413878, y: 1.2413878, z: 1.2413878}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -470,7 +493,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
         type: 3}
@@ -553,10 +576,6 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 2062876397275782058}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3a3cd868d0630b04eabec7fcfd034f3b,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 4930012848831982890}
   m_SourcePrefab: {fileID: 100100000, guid: 3a3cd868d0630b04eabec7fcfd034f3b, type: 3}
 --- !u!1 &8246535541464125825 stripped
 GameObject:
@@ -725,28 +744,6 @@ MonoBehaviour:
   trailColor: {r: 0.4, g: 0.9, b: 1, a: 0.3}
   useSmoothTaper: 1
   useAdditiveBlending: 1
---- !u!95 &4930012848831982890
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8246535541464125825}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 1c73853f5c1f3c64b8be5b0b94d1569f, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!4 &8735370081244678971 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3a3cd868d0630b04eabec7fcfd034f3b,

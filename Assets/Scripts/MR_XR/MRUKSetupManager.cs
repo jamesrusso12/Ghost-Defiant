@@ -56,6 +56,10 @@ public class MRUKSetupManager : MonoBehaviour
     {
         if (mrukInstance == null) return;
         
+        // Fix for "EnableWorldLock is enabled and is controlling the tracking space position" warning spam
+        // Disable World Lock by default as we handle alignment via manual tracking space offset or just let it float
+        mrukInstance.EnableWorldLock = false;
+        
         // Configure scene settings
         mrukInstance.SceneSettings.LoadSceneOnStartup = loadSceneOnStartup;
         mrukInstance.SceneSettings.RoomIndex = roomIndex;
@@ -74,6 +78,16 @@ public class MRUKSetupManager : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log($"[MRUKSetupManager] Configured with RoomIndex: {roomIndex}");
+        }
+    }
+
+    private void Update()
+    {
+        // FORCE disable World Lock every frame if it keeps getting enabled
+        // This is a brute force fix for the spammy warning log
+        if (mrukInstance != null && mrukInstance.EnableWorldLock)
+        {
+            mrukInstance.EnableWorldLock = false;
         }
     }
     

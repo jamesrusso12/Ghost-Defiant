@@ -5,6 +5,7 @@ using Meta.XR.MRUtilityKit;
 using System.Collections.Generic;
 using Unity.Collections;
 using System.Linq;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 public class DestructibleGlobalMeshManager : MonoBehaviour
 {
@@ -35,6 +36,7 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
     [Header("Performance Settings")]
     [SerializeField] private int maxDebrisPerDestruction = 8;
     [SerializeField] private bool enableBarycentricCoordinates = true;
+    [SerializeField] private bool enableDebugLogs = false;
 
     [Header("Events")]
     [SerializeField] private SegmentDestroyedEvent onSegmentDestroyed = new SegmentDestroyedEvent();
@@ -133,6 +135,12 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
         if (currentComponent == null || segment == null) return;
         if (currentComponent.ReservedSegment == segment) return;
 
+        Stopwatch sw = null;
+        if (enableDebugLogs)
+        {
+            sw = Stopwatch.StartNew();
+        }
+
         GameObject segmentToDestroy = null;
 
         // OPTIMIZATION: Fast O(1) dictionary lookup first
@@ -142,6 +150,16 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
         }
         else
         {
+            // QUICK REJECT: If the hit object is not part of the destructible mesh hierarchy, 
+            // it's an environment object (Tree, Floor, etc.). Stop here.
+            if (currentComponent != null && !segment.transform.IsChildOf(currentComponent.transform))
+            {
+                // This is a normal occurrence when shooting through holes or at non-destructible objects
+                return;
+            }
+
+            if (enableDebugLogs) Debug.LogWarning($"[DestructibleGlobalMeshManager] Slow lookup for {segment.name} - falling back to hierarchy search");
+            
             // Fallback: Check parent hierarchy (for edge cases)
             Transform current = segment.transform;
             while (current != null && segmentToDestroy == null)
@@ -156,6 +174,7 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
             // If still not found, check if any segment is a child of the hit object (rare case)
             if (segmentToDestroy == null)
             {
+                // This loop is O(N) and expensive. Only run it if we are sure we hit the destructible structure.
                 foreach (var seg in segments)
                 {
                     if (seg != null && seg.transform.IsChildOf(segment.transform))
@@ -170,7 +189,8 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
         // If we couldn't find a valid segment, log warning and return
         if (segmentToDestroy == null)
         {
-            Debug.LogWarning($"[DestructibleGlobalMeshManager] Could not find segment to destroy for hit object: {segment.name}");
+            // Suppress this warning as it happens frequently when hitting non-mapped children
+            if (enableDebugLogs) Debug.LogWarning($"[DestructibleGlobalMeshManager] Could not find segment to destroy for hit object: {segment.name}");
             return;
         }
 
@@ -200,6 +220,16 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
 
         // DEBRIS DISABLED - Taking a break from debris functionality
         // InstantiateDebris(hitPosition, hitNormal);
+
+        if (enableDebugLogs && sw != null)
+        {
+            sw.Stop();
+            // Reduced logging frequency/verbosity to prevent spam during normal gameplay
+            if (sw.Elapsed.TotalMilliseconds > 1.0f)
+            {
+                UnityEngine.Debug.Log($"[DestructibleGlobalMeshManager] DestroyMeshSegment took {sw.Elapsed.TotalMilliseconds:F2} ms. Segments tracked: {segments.Count}. Lookup size: {segmentLookup.Count}");
+            }
+        }
     }
 
     private void HandleSegmentDestroyed(GameObject destroyedSegment)
@@ -275,9 +305,25 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
     // --- Shader Support ---
     private DestructibleMeshComponent.MeshSegmentationResult AddBarycentricCoordinates(DestructibleMeshComponent.MeshSegmentationResult res)
     {
+        Stopwatch sw = null;
+        if (enableDebugLogs) 
+        {
+            sw = Stopwatch.StartNew();
+            UnityEngine.Debug.Log("[DestructibleGlobalMeshManager] AddBarycentricCoordinates called - starting calculation...");
+        }
+        
         List<DestructibleMeshComponent.MeshSegment> newSegs = new List<DestructibleMeshComponent.MeshSegment>();
         foreach (var seg in res.segments) newSegs.Add(AddBar(seg));
-        return new DestructibleMeshComponent.MeshSegmentationResult() { segments = newSegs, reservedSegment = AddBar(res.reservedSegment) };
+        
+        var result = new DestructibleMeshComponent.MeshSegmentationResult() { segments = newSegs, reservedSegment = AddBar(res.reservedSegment) };
+
+        if (enableDebugLogs && sw != null)
+        {
+            sw.Stop();
+            UnityEngine.Debug.Log($"[DestructibleGlobalMeshManager] AddBarycentricCoordinates finished in {sw.Elapsed.TotalMilliseconds:F2} ms for {res.segments.Count} segments.");
+        }
+
+        return result;
     }
 
     private static DestructibleMeshComponent.MeshSegment AddBar(DestructibleMeshComponent.MeshSegment seg)

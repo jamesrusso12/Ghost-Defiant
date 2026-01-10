@@ -17029,6 +17029,7 @@ MonoBehaviour:
   debrisLifetime: 5
   maxDebrisPerDestruction: 6
   enableBarycentricCoordinates: 1
+  enableDebugLogs: 1
   onSegmentDestroyed:
     m_PersistentCalls:
       m_Calls: []
@@ -32550,7 +32551,7 @@ MonoBehaviour:
     type: 3}
   minEdgeDistance: 0.3
   spawnLabels: 4
-  normalOffset: -2
+  normalOffset: 1
   spawnTry: 1000
   overrideSpawnY: 1
   spawnY: 1
