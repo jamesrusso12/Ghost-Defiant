@@ -104,6 +104,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\SkewTextExample.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\WarpTextExample.cs" />
     <Compile Include="Assets\Scripts\MR_XR\VirtualObjectOccluder.cs" />
+    <Compile Include="Assets\Scripts\Core\WeaponLightSetup.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ShaderPropAnimator.cs" />
     <Compile Include="Assets\Scripts\Unused\MetaSDKFix.cs" />
     <Compile Include="Assets\Scripts\Core\GhostSpawner.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextInfoDebugTool.cs" />
     <Compile Include="Assets\Scripts\Debug\AndroidBuildConfigurator.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexShakeA.cs" />
+    <Compile Include="Assets\Scripts\Debug\LightingDiagnostic.cs" />
     <Compile Include="Assets\Scripts\UI\FadeScreen.cs" />
     <Compile Include="Assets\Scripts\Systems\RuntimeMeshHider.cs" />
     <Compile Include="Assets\Prefabs\GraveyardProps\Scripts\rotate.cs" />
@@ -137,6 +139,7 @@
     <Compile Include="Assets\Scripts\MR_XR\RoomVisualizer.cs" />
     <Compile Include="Assets\Scripts\Audio\AudioManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark03.cs" />
+    <Compile Include="Assets\Scripts\Core\WeaponLightParent.cs" />
     <Compile Include="Assets\Scripts\UI\StartMenuController.cs" />
     <Compile Include="Assets\Scripts\MR_XR\PassthroughMeshConfigurator.cs" />
     <Compile Include="Assets\Scripts\MR_XR\XRConfigurationManager.cs" />

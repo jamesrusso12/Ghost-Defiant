@@ -41,7 +41,7 @@ TagManager:
   - VirtualEnvironment
   - Player
   - Projectile
-  - 
+  - Ignore Light
   - 
   - 
   - 
@@ -60,7 +60,6 @@ TagManager:
   - 
   - 
   - OVROverlayCanvas Rendering
-  - 
   - 
   - 
   m_SortingLayers:

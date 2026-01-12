@@ -381,15 +381,28 @@ public class Ghost : MonoBehaviour, IPooledObject
 
         // If something (often animation/root motion) nudges the ghost off the NavMesh,
         // the agent stops updating and the ghost appears frozen. Try to recover gracefully.
+        // OPTIMIZATION: Cache NavMesh check - this can be expensive with many ghosts
         if (!agent.isOnNavMesh)
         {
+            var sw = enableDebugLogging ? System.Diagnostics.Stopwatch.StartNew() : null;
+            
             NavMeshHit hit;
             if (NavMesh.SamplePosition(transform.position, out hit, 2f, NavMesh.AllAreas))
             {
                 agent.Warp(hit.position);
+                
+                if (sw != null)
+                {
+                    sw.Stop();
+                    if (sw.ElapsedMilliseconds > 1)
+                    {
+                        UnityEngine.Debug.Log($"[PERF] Ghost {gameObject.name}: NavMesh recovery took {sw.ElapsedMilliseconds}ms");
+                    }
+                }
             }
             else
             {
+                if (enableDebugLogging) UnityEngine.Debug.LogWarning($"[Ghost] {gameObject.name} could not recover NavMesh position");
                 return;
             }
         }

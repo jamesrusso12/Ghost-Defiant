@@ -12,13 +12,13 @@ EditorBuildSettings:
     path: Assets/Scenes/MainGameScene/MainGameScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 0
-    path: Assets/Scenes/RayExamples.unity
+    path: Assets/Scenes/TestScenes/RayExamples.unity
     guid: 1b2d3f90c0f50b94cb910c66c773d00d
   - enabled: 0
     path: Assets/Samples/Meta MR Utility Kit/72.0.0/Environment Panel Placement (Beta)/EnvironmentPanelPlacement.unity
     guid: 01a2198db44a25d44a3108875f7fd3d5
   - enabled: 0
-    path: Assets/Scenes/Destructible Mesh Test.unity
+    path: Assets/Scenes/TestScenes/Destructible Mesh Test.unity
     guid: daa3598e1299fe448985a1f237174b57
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: cc159ae48ddb07449a98b1a576ee1949,

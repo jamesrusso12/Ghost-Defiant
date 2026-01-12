@@ -53,26 +53,45 @@ public class GameUILazyFollow : MonoBehaviour
     private Vector3 velocity = Vector3.zero;
     private Camera m_Camera;
 
+    // OPTIMIZATION: Cache raycast results to avoid per-frame Physics.Raycast calls
+    private Vector3 cachedTargetPosition;
+    private float lastPositionUpdateTime = 0f;
+    private float positionUpdateInterval = 0.1f; // Update every 100ms instead of every frame
+    
     // improved target position calculation
     Vector3 targetPosition
     {
         get
         {
-            if (m_Target == null) return transform.position;
-
-            Vector3 desiredPos = m_Target.TransformPoint(m_TargetOffset);
-
-            // Check for walls between camera and desired position
-            Vector3 dir = desiredPos - m_Target.position;
-            float dist = dir.magnitude;
-
-            if (Physics.Raycast(m_Target.position, dir.normalized, out RaycastHit hit, dist, collisionMask))
+            // OPTIMIZATION: Only recalculate raycast periodically, not every frame
+            if (Time.time - lastPositionUpdateTime >= positionUpdateInterval)
             {
-                // Hit a wall! Place UI slightly in front of the hit point
-                return hit.point - (dir.normalized * wallOffset);
-            }
+                if (m_Target == null)
+                {
+                    cachedTargetPosition = transform.position;
+                    return cachedTargetPosition;
+                }
 
-            return desiredPos;
+                Vector3 desiredPos = m_Target.TransformPoint(m_TargetOffset);
+
+                // Check for walls between camera and desired position
+                Vector3 dir = desiredPos - m_Target.position;
+                float dist = dir.magnitude;
+
+                if (Physics.Raycast(m_Target.position, dir.normalized, out RaycastHit hit, dist, collisionMask))
+                {
+                    // Hit a wall! Place UI slightly in front of the hit point
+                    cachedTargetPosition = hit.point - (dir.normalized * wallOffset);
+                }
+                else
+                {
+                    cachedTargetPosition = desiredPos;
+                }
+                
+                lastPositionUpdateTime = Time.time;
+            }
+            
+            return cachedTargetPosition;
         }
     }
 

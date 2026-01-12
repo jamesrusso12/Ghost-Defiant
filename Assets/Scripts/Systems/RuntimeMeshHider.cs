@@ -1,4 +1,6 @@
 using UnityEngine;
+using System.Diagnostics;
+using Debug = UnityEngine.Debug;
 
 /// <summary>
 /// Simple runtime script to hide Scene Mesh wireframe overlay on Quest device.
@@ -34,31 +36,38 @@ public class RuntimeMeshHider : MonoBehaviour
     
     private void HideMeshOverlay()
     {
-        // Find all MeshVolume or RoomMesh objects
-        GameObject[] allObjects = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        // OPTIMIZATION: Cache MeshRenderers instead of using expensive FindObjectsByType<GameObject>
+        // FindObjectsByType<GameObject> searches ALL GameObjects in scene - extremely expensive!
         
         int hiddenCount = 0;
-        foreach (GameObject obj in allObjects)
+        Stopwatch sw = Stopwatch.StartNew();
+        
+        // OPTIMIZATION: Search for MeshRenderers directly (much faster than finding all GameObjects first)
+        MeshRenderer[] allRenderers = FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
+        
+        foreach (MeshRenderer renderer in allRenderers)
         {
-            // Look for Scene Mesh objects (created by RoomMeshController)
+            if (renderer == null || !renderer.enabled) continue;
+            
+            // Check if this renderer's GameObject has mesh-related naming
+            GameObject obj = renderer.gameObject;
             if (obj.name.Contains("MeshVolume") || 
                 obj.name.Contains("RoomMesh") || 
-                obj.name.Contains("SceneMesh"))
+                obj.name.Contains("SceneMesh") ||
+                obj.name.Contains("MeshAnchor"))
             {
-                MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
-                if (renderer != null && renderer.enabled)
-                {
-                    // Instead of disabling renderer (breaks passthrough), make material transparent
-                    MakeMaterialTransparent(renderer);
-                    hiddenCount++;
-                    Debug.Log($"[RuntimeMeshHider] Made mesh transparent on {obj.name} (renderer still active for passthrough)");
-                }
+                MakeMaterialTransparent(renderer);
+                hiddenCount++;
+                Debug.Log($"[RuntimeMeshHider] Made mesh transparent on {obj.name}");
             }
         }
         
+        sw.Stop();
+        
         if (hiddenCount > 0)
         {
-            Debug.Log($"[RuntimeMeshHider] Successfully made {hiddenCount} mesh(es) transparent after {waitTime}s delay");
+            Debug.Log($"[RuntimeMeshHider] Successfully made {hiddenCount} mesh(es) transparent after {waitTime}s delay (took {sw.ElapsedMilliseconds}ms)");
+            UnityEngine.Debug.Log($"[PERF] RuntimeMeshHider: Found {allRenderers.Length} total MeshRenderers, hid {hiddenCount} mesh objects in {sw.ElapsedMilliseconds}ms");
         }
         else
         {

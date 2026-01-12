@@ -181,9 +181,20 @@ public class GhostSpawner : MonoBehaviour
         if (allowFallbackSpawnNearPlayer) SpawnGhostFallbackNearPlayer();
     }
 
+    // OPTIMIZATION: Cache player reference to avoid expensive FindGameObjectWithTag() on every fallback spawn
+    private static GameObject cachedPlayer = null;
+    
     private void SpawnGhostFallbackNearPlayer()
     {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        // OPTIMIZATION: Cache player reference (only find once)
+        if (cachedPlayer == null)
+        {
+            cachedPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (cachedPlayer != null && debugLogging)
+                Debug.Log($"[PERF] GhostSpawner: Cached Player reference ({cachedPlayer.name})");
+        }
+        
+        GameObject player = cachedPlayer;
         if (player == null)
         {
             if (debugLogging) Debug.LogWarning("[GhostSpawner] Fallback spawn failed: Player tag not found.");

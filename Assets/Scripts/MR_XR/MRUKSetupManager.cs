@@ -22,6 +22,16 @@ public class MRUKSetupManager : MonoBehaviour
     private bool isInitialized = false;
     private MRUK mrukInstance;
     
+    void Awake()
+    {
+        // Try to catch MRUK before it initializes to stop the World Lock spam
+        var mruk = FindFirstObjectByType<MRUK>();
+        if (mruk != null)
+        {
+            mruk.EnableWorldLock = false;
+        }
+    }
+
     void Start()
     {
         StartCoroutine(InitializeMRUK());
@@ -81,13 +91,16 @@ public class MRUKSetupManager : MonoBehaviour
         }
     }
 
-    private void Update()
+    private void LateUpdate()
     {
         // FORCE disable World Lock every frame if it keeps getting enabled
+        // Use LateUpdate() to run AFTER the SDK's Update() methods, ensuring we catch it
         // This is a brute force fix for the spammy warning log
-        if (mrukInstance != null && mrukInstance.EnableWorldLock)
+        // Use singleton pattern if local ref is missing to catch it faster
+        var instance = mrukInstance ?? MRUK.Instance;
+        if (instance != null && instance.EnableWorldLock)
         {
-            mrukInstance.EnableWorldLock = false;
+            instance.EnableWorldLock = false;
         }
     }
     

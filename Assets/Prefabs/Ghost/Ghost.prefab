@@ -50,7 +50,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6f4432cd8dfce544ba26eda0c8904b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 0}
+  animator: {fileID: 6733308147934377481}
   speed: 4
   roamRadius: 3
   roamInterval: 2

@@ -58,6 +58,10 @@ public class RoomVisualizer : MonoBehaviour
     private List<GameObject> visualizationObjects = new List<GameObject>();
     private GameObject visualizationParent;
     
+    // OPTIMIZATION: Cache materials to avoid creating new ones on every update
+    private Material cachedLineMaterial = null;
+    private Material cachedMaterial = null;
+    
     void Start()
     {
         if (!showVisualization) return;
@@ -564,40 +568,54 @@ public class RoomVisualizer : MonoBehaviour
     
     /// <summary>
     /// Creates a material for line rendering
+    /// OPTIMIZATION: Cache materials to avoid allocation on every update
     /// </summary>
     private Material CreateLineMaterial(Color color)
     {
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        if (mat == null)
+        // Reuse cached material if it exists
+        if (cachedLineMaterial == null)
         {
-            mat = new Material(Shader.Find("Unlit/Color"));
+            cachedLineMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            if (cachedLineMaterial == null)
+            {
+                cachedLineMaterial = new Material(Shader.Find("Unlit/Color"));
+            }
         }
-        if (mat != null)
+        
+        // Update color if needed (materials are instanced per renderer anyway)
+        if (cachedLineMaterial != null)
         {
-            mat.color = color;
+            cachedLineMaterial.color = color;
         }
-        return mat;
+        return cachedLineMaterial;
     }
     
     /// <summary>
     /// Creates a material for solid objects
+    /// OPTIMIZATION: Cache materials to avoid allocation on every update
     /// </summary>
     private Material CreateMaterial(Color color)
     {
-        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        if (mat == null)
+        // Reuse cached material if it exists
+        if (cachedMaterial == null)
         {
-            mat = new Material(Shader.Find("Standard"));
-        }
-        if (mat != null)
-        {
-            mat.color = color;
-            if (mat.HasProperty("_BaseColor"))
+            cachedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (cachedMaterial == null)
             {
-                mat.SetColor("_BaseColor", color);
+                cachedMaterial = new Material(Shader.Find("Standard"));
             }
         }
-        return mat;
+        
+        // Update color if needed
+        if (cachedMaterial != null)
+        {
+            cachedMaterial.color = color;
+            if (cachedMaterial.HasProperty("_BaseColor"))
+            {
+                cachedMaterial.SetColor("_BaseColor", color);
+            }
+        }
+        return cachedMaterial;
     }
     
     void OnDestroy()

@@ -56,10 +56,14 @@ public class DisableSceneMeshRenderer : MonoBehaviour
             DisableRendererOnObject(anchor.gameObject);
         }
         
-        // Also check for any objects with "RoomMesh" or "SceneMesh" in the name
-        var allObjects = FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (var obj in allObjects)
+        // OPTIMIZATION: Use FindObjectsByType<MeshRenderer> instead of FindObjectsByType<GameObject>
+        // FindObjectsByType<GameObject> searches ALL GameObjects - extremely expensive!
+        // Since we only care about objects with MeshRenderers, search for those directly
+        var allRenderers = FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var renderer in allRenderers)
         {
+            if (renderer == null) continue;
+            var obj = renderer.gameObject;
             if (obj.name.Contains("RoomMesh") || obj.name.Contains("SceneMesh") || obj.name.Contains("MeshVolume"))
             {
                 DisableRendererOnObject(obj);

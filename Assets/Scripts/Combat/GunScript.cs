@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.Events;
+using Debug = UnityEngine.Debug;
 
 public class GunScript : MonoBehaviour
 {
@@ -256,9 +258,16 @@ public class ProjectileController : MonoBehaviour
         if (debugLogging) Debug.Log($"[ProjectileController] Initialized. Collider enabled immediately (using Physics.IgnoreCollision)");
     }
     
+    // OPTIMIZATION: Cache expensive Find() results as static references
+    private static GameObject cachedPlayer = null;
+    private static GameObject cachedCameraRig = null;
+    
     private void SetupCollisionIgnores()
     {
         if (projectileCollider == null) return;
+        
+        Stopwatch sw = null;
+        if (debugLogging) sw = System.Diagnostics.Stopwatch.StartNew();
         
         // Ignore gun colliders
         if (gunObject != null)
@@ -288,11 +297,17 @@ public class ProjectileController : MonoBehaviour
             }
         }
         
-        // Ignore player colliders
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
+        // OPTIMIZATION: Cache player reference to avoid expensive FindGameObjectWithTag() on every projectile
+        if (cachedPlayer == null)
         {
-            Collider[] playerColliders = player.GetComponentsInChildren<Collider>();
+            cachedPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (debugLogging && cachedPlayer != null)
+                UnityEngine.Debug.Log($"[PERF] ProjectileController: Cached Player reference ({cachedPlayer.name})");
+        }
+        
+        if (cachedPlayer != null)
+        {
+            Collider[] playerColliders = cachedPlayer.GetComponentsInChildren<Collider>();
             foreach (Collider playerCollider in playerColliders)
             {
                 if (playerCollider != null)
@@ -302,14 +317,19 @@ public class ProjectileController : MonoBehaviour
             }
         }
         
-        // Ignore VR camera rig colliders
-        GameObject cameraRig = GameObject.Find("OVRCameraRig");
-        if (cameraRig == null) cameraRig = GameObject.Find("XR Origin");
-        if (cameraRig == null) cameraRig = GameObject.Find("CameraRig");
-        
-        if (cameraRig != null)
+        // OPTIMIZATION: Cache VR camera rig reference
+        if (cachedCameraRig == null)
         {
-            Collider[] rigColliders = cameraRig.GetComponentsInChildren<Collider>();
+            cachedCameraRig = GameObject.Find("OVRCameraRig");
+            if (cachedCameraRig == null) cachedCameraRig = GameObject.Find("XR Origin");
+            if (cachedCameraRig == null) cachedCameraRig = GameObject.Find("CameraRig");
+            if (debugLogging && cachedCameraRig != null)
+                UnityEngine.Debug.Log($"[PERF] ProjectileController: Cached CameraRig reference ({cachedCameraRig.name})");
+        }
+        
+        if (cachedCameraRig != null)
+        {
+            Collider[] rigColliders = cachedCameraRig.GetComponentsInChildren<Collider>();
             foreach (Collider col in rigColliders)
             {
                 if (col != null)
@@ -326,6 +346,8 @@ public class ProjectileController : MonoBehaviour
             ProjectileController.cachedSkybox = GameObject.Find("NightSkybox");
             if (ProjectileController.cachedSkybox == null) ProjectileController.cachedSkybox = GameObject.Find("Skybox");
             if (ProjectileController.cachedSkybox == null) ProjectileController.cachedSkybox = GameObject.Find("Sky");
+            if (debugLogging && ProjectileController.cachedSkybox != null)
+                UnityEngine.Debug.Log($"[PERF] ProjectileController: Cached Skybox reference ({ProjectileController.cachedSkybox.name})");
         }
         
         if (ProjectileController.cachedSkybox != null)
@@ -339,6 +361,12 @@ public class ProjectileController : MonoBehaviour
                     if (debugLogging) Debug.Log($"[ProjectileController] Ignoring skybox collider: {ProjectileController.cachedSkybox.name}");
                 }
             }
+        }
+        
+        if (debugLogging && sw != null)
+        {
+            sw.Stop();
+            UnityEngine.Debug.Log($"[PERF] ProjectileController.SetupCollisionIgnores took {sw.ElapsedMilliseconds}ms");
         }
     }
 
