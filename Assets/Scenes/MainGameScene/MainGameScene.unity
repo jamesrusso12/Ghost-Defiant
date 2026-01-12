@@ -4280,6 +4280,7 @@ GameObject:
   - component: {fileID: 269540712}
   - component: {fileID: 269540711}
   - component: {fileID: 269540713}
+  - component: {fileID: 269540714}
   m_Layer: 0
   m_Name: FileLogger
   m_TagString: Untagged
@@ -4328,10 +4329,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: '::'
   sampleInterval: 0.5
   forcePeriodicLog: 0
-  lightIntensityDelta: 0.05
-  ambientIntensityDelta: 0.05
-  reflectionIntensityDelta: 0.05
-  fogDensityDelta: 0.0005
+--- !u!114 &269540714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 269540710}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cb7012b4daccc540832196df8a2b3a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  keepThisDirectional: {fileID: 410087040}
+  interval: 0.25
 --- !u!1 &272747088
 GameObject:
   m_ObjectHideFlags: 0
@@ -25517,7 +25528,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!199 &1713535256
 ParticleSystemRenderer:
   serializedVersion: 6

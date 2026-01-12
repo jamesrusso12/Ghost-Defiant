@@ -136,6 +136,7 @@
     <Compile Include="Assets\Scripts\Systems\SettingsManager.cs" />
     <Compile Include="Assets\Scripts\Core\LoadoutManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\CameraController.cs" />
+    <Compile Include="Assets\Scripts\Debug\DirectionalLightEnforcer.cs" />
     <Compile Include="Assets\Scripts\MR_XR\RoomVisualizer.cs" />
     <Compile Include="Assets\Scripts\Audio\AudioManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark03.cs" />
