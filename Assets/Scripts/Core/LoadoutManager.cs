@@ -149,17 +149,66 @@ public class LoadoutManager : MonoBehaviour
             Debug.LogError("[LoadoutManager] CRITICAL: Dummy Gun Prefab is NOT ASSIGNED in Inspector!");
         else
             Debug.LogError($"[LoadoutManager] Dummy Gun Prefab OK: {dummyGunPrefab.name}");
-            
+
         if (dummyFlashlightPrefab == null)
             Debug.LogError("[LoadoutManager] CRITICAL: Dummy Flashlight Prefab is NOT ASSIGNED in Inspector!");
         else
             Debug.LogError($"[LoadoutManager] Dummy Flashlight Prefab OK: {dummyFlashlightPrefab.name}");
-        
-        // Ensure real items are hidden at start
-        if (realGunObject != null) realGunObject.SetActive(false);
-        if (realFlashlightObject != null) realFlashlightObject.SetActive(false);
+
+        // CRITICAL: Force disable real items at start - prevents seeing them in hands before pickup
+        // This overrides any accidental scene/inspector configuration
+        if (realGunObject != null)
+        {
+            // Unparent from controllers if accidentally parented in scene
+            if (realGunObject.transform.parent != null)
+            {
+                string parentName = realGunObject.transform.parent.name.ToLower();
+                if (parentName.Contains("controller") || parentName.Contains("hand") || parentName.Contains("anchor"))
+                {
+                    Debug.LogWarning($"[LoadoutManager] Real Gun was parented to {realGunObject.transform.parent.name} in scene! Unparenting...");
+                    realGunObject.transform.SetParent(null);
+                }
+            }
+
+            // AGGRESSIVE HIDE: Disable all renderers first (immediate visual hide)
+            DisableAllRenderersInHierarchy(realGunObject);
+
+            // Then disable the GameObject completely
+            realGunObject.SetActive(false);
+            Debug.Log("[LoadoutManager] Real Gun FULLY disabled at start (invisible until pickup)");
+        }
+
+        if (realFlashlightObject != null)
+        {
+            // Unparent from controllers if accidentally parented in scene
+            if (realFlashlightObject.transform.parent != null)
+            {
+                string parentName = realFlashlightObject.transform.parent.name.ToLower();
+                if (parentName.Contains("controller") || parentName.Contains("hand") || parentName.Contains("anchor"))
+                {
+                    Debug.LogWarning($"[LoadoutManager] Real Flashlight was parented to {realFlashlightObject.transform.parent.name} in scene! Unparenting...");
+                    realFlashlightObject.transform.SetParent(null);
+                }
+            }
+
+            // AGGRESSIVE HIDE: Disable all renderers first (immediate visual hide)
+            DisableAllRenderersInHierarchy(realFlashlightObject);
+
+            // Then disable the GameObject completely
+            realFlashlightObject.SetActive(false);
+            Debug.Log("[LoadoutManager] Real Flashlight FULLY disabled at start (invisible until pickup)");
+        }
+
         SetActiveForAll(enableOnFlashlightCollected, false);
         SetActiveForAll(enableOnGunCollected, false);
+
+        // SAFETY: Force skipFloorSpawn to false if accidentally enabled
+        // This prevents items spawning in hands immediately
+        if (skipFloorSpawn)
+        {
+            Debug.LogWarning("[LoadoutManager] skipFloorSpawn was enabled! This causes items to appear in hands immediately. Disabling for proper gameplay flow.");
+            skipFloorSpawn = false;
+        }
 
         if (GameManager.instance != null)
         {
@@ -169,8 +218,11 @@ public class LoadoutManager : MonoBehaviour
 
     void Update()
     {
+        // SAFETY: This debug feature should only be used for testing
+        // It immediately equips items without floor spawn
         if (skipFloorSpawn)
         {
+            Debug.LogWarning("[LoadoutManager] skipFloorSpawn triggered! Equipping items immediately (debug mode)");
             skipFloorSpawn = false;
             OnItemPickedUp(SimplePickup.ItemType.Gun);
             OnItemPickedUp(SimplePickup.ItemType.Flashlight);
@@ -238,6 +290,29 @@ public class LoadoutManager : MonoBehaviour
         CheckAllCollected();
     }
     
+    // Helper to force-disable all renderers (makes object invisible immediately)
+    void DisableAllRenderersInHierarchy(GameObject obj)
+    {
+        if (obj == null) return;
+
+        // Disable ALL types of renderers to ensure nothing is visible
+        Renderer[] allRenderers = obj.GetComponentsInChildren<Renderer>(true);
+        int disabledCount = 0;
+        foreach (var r in allRenderers)
+        {
+            if (r != null && r.enabled)
+            {
+                r.enabled = false;
+                disabledCount++;
+            }
+        }
+
+        if (disabledCount > 0)
+        {
+            Debug.Log($"[LoadoutManager] Disabled {disabledCount} renderer(s) in {obj.name} hierarchy");
+        }
+    }
+
     // Helper to force-enable all mesh renderers in case children are disabled
     void EnableAllChildRenderers(GameObject obj)
     {

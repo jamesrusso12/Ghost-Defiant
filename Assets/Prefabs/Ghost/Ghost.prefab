@@ -50,12 +50,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 6733308147934377481}
-  speed: 4
-  roamRadius: 3
-  roamInterval: 2
+  speed: 5
+  roamRadius: 4
+  roamInterval: 3
   detectionRange: 5
   hoverHeight: 0
-  explorationCuriosity: 0.7
+  explorationCuriosity: 0.75
   minExploreTime: 2
   maxExploreTime: 5
   hideDistance: 8
