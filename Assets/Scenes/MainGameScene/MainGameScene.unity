@@ -2042,7 +2042,7 @@ MonoBehaviour:
   enableOnGunCollected: []
   gunMount: {fileID: 70139190}
   flashlightMount: {fileID: 1590491424}
-  gunHandPosition: {x: 0, y: 0.2, z: 0}
+  gunHandPosition: {x: 0, y: 0.05, z: 0}
   gunHandRotation: {x: 0, y: 0, z: 0}
   flashlightHandPosition: {x: 0, y: 0, z: 0}
   flashlightHandRotation: {x: 90, y: 0, z: 0}

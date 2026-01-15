@@ -243,7 +243,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::FlatKit.ObjectOutlineRendererFeature
   m_Active: 1
   settings:
-    passTag: RenderObjectsFeature
+    passTag: Flat Kit Per Object Outline
     Event: 300
     filterSettings:
       RenderQueueType: 0
@@ -272,5 +272,19 @@ MonoBehaviour:
       restoreCamera: 1
       offset: {x: 0, y: 0, z: 0, w: 0}
       cameraFieldOfView: 60
-  materials: []
+  materials:
+  - {fileID: 2100000, guid: a3cc86fda85e4c34ea4eb12bb436f907, type: 2}
+  - {fileID: 2100000, guid: 29237013c345fcb49ad62f3f204ffac1, type: 2}
+  - {fileID: 2100000, guid: ddf83a57ee8b6c34db57ac7c37ed3dcc, type: 2}
+  - {fileID: 2100000, guid: f75b79d5e042949408bb467484c5fa83, type: 2}
+  - {fileID: 2100000, guid: 32ade3ee0eb8d8c4f8b8322f2e001712, type: 2}
+  - {fileID: 2100000, guid: a4fc0bed0e4ec7d49b6dc677a0994c99, type: 2}
+  - {fileID: 2100000, guid: 039a806a87894d243a3440b01a25448d, type: 2}
+  - {fileID: 2100000, guid: ea93ab9c409a2764c990280bcfc027ca, type: 2}
+  - {fileID: 2100000, guid: a3995aae47b89e94da653f97d4e95eb9, type: 2}
+  - {fileID: 2100000, guid: f1edc94d20307e549a6bdadff5e477ae, type: 2}
+  - {fileID: 2100000, guid: 8ba4be3152b58d94282811994905789b, type: 2}
+  - {fileID: 2100000, guid: b2144ed9cf786ae4e959be653ad748c3, type: 2}
+  - {fileID: 2100000, guid: a565b68e54d8d0241ba15b0f2cf330a3, type: 2}
+  - {fileID: 2100000, guid: a74217e48a24f1a48b7a0012604a6dc3, type: 2}
   autoReferenceMaterials: 1

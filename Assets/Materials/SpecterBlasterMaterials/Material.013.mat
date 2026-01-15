@@ -12,8 +12,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - DR_OUTLINE_ON
-  - DR_RIM_ON
+  - DR_OUTLINE_SMOOTH_NORMALS
   - _CELPRIMARYMODE_SINGLE
   - _DETAILMAPBLENDINGMODE_MULTIPLY
   - _GRADIENTSPACE_WORLD
@@ -354,7 +353,7 @@ Material:
     - _FirstShadeVisible: 1
     - _FlatRimEdgeSmoothness: 1
     - _FlatRimLightAlign: 0.5
-    - _FlatRimSize: 0.2
+    - _FlatRimSize: 0
     - _FlatSpecularEdgeSmoothness: 0.348
     - _FlatSpecularSize: 0.066
     - _Flatness: 1
@@ -439,7 +438,7 @@ Material:
     - _Offset_Y_Axis_BLD: 0.09
     - _Offset_Z: 0
     - _OutlineDepthOffset: 0
-    - _OutlineEnabled: 1
+    - _OutlineEnabled: 0
     - _OutlineOverridden: 0
     - _OutlineScale: 1
     - _OutlineSpace: 0
@@ -457,7 +456,7 @@ Material:
     - _ReceiveShadows: 1
     - _ReceivesSSR: 1
     - _RefractionModel: 0
-    - _RimEnabled: 1
+    - _RimEnabled: 0
     - _RimLight: 0
     - _RimLightOverridden: 0
     - _RimLightVisible: 1
@@ -475,11 +474,11 @@ Material:
     - _Scroll_EmissiveV: 0
     - _SecondShadeOverridden: 0
     - _SecondShadeVisible: 1
-    - _SelfShadingSize: 0.166
+    - _SelfShadingSize: 0.1
     - _SelfShadingSizeExtra: 0.6
     - _Set_SystemShadowsToBase: 1
     - _ShadeColor_Step: 0
-    - _ShadowEdgeSize: 0
+    - _ShadowEdgeSize: 0.5
     - _ShadowEdgeSizeExtra: 0.05
     - _Shininess: 0
     - _Smoothness: 0
@@ -564,7 +563,7 @@ Material:
     - _Use_1stAs2nd: 0
     - _Use_BaseAs1st: 0
     - _VertexColorsEnabled: 0
-    - _VertexExtrusionSmoothNormals: 0
+    - _VertexExtrusionSmoothNormals: 1
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZOverDrawMode: 0

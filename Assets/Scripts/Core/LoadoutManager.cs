@@ -135,6 +135,7 @@ public class LoadoutManager : MonoBehaviour
 
     private bool gunCollected = false;
     private bool flashlightCollected = false;
+    private bool controllersHidden = false;
 
     private void Awake()
     {
@@ -192,6 +193,9 @@ public class LoadoutManager : MonoBehaviour
 
                 SnapToMount(realGunObject, gunMount, gunHandPosition, gunHandRotation);
 
+                // Hide controller models to prevent overlap with gun
+                HideControllerModels();
+
                 // Enable any extra gun-related objects
                 SetActiveForAll(enableOnGunCollected, true);
 
@@ -218,6 +222,9 @@ public class LoadoutManager : MonoBehaviour
                 EnableAllChildRenderers(realFlashlightObject);
 
                 SnapToMount(realFlashlightObject, flashlightMount, flashlightHandPosition, flashlightHandRotation);
+
+                // Hide controller models to prevent overlap with flashlight
+                HideControllerModels();
 
                 // Enable any extra flashlight-related objects (your cone / secondary passthrough, etc.)
                 SetActiveForAll(enableOnFlashlightCollected, true);
@@ -1078,5 +1085,177 @@ public class LoadoutManager : MonoBehaviour
         
         // Auto-destroy after lifetime
         Destroy(sphere, lifetime);
+    }
+
+    /// <summary>
+    /// Hides Meta Quest controller models to prevent overlap with gun/flashlight models.
+    /// Handles both traditional controller anchors and Building Block controllers.
+    /// </summary>
+    void HideControllerModels()
+    {
+        if (controllersHidden) return; // Already hidden
+
+        bool foundAny = false;
+
+        // Method 1: Find controller anchors (traditional approach)
+        GameObject leftAnchor = GameObject.Find("LeftControllerAnchor");
+        GameObject rightAnchor = GameObject.Find("RightControllerAnchor");
+
+        if (leftAnchor != null)
+        {
+            HideRenderersInHierarchy(leftAnchor);
+            foundAny = true;
+        }
+
+        if (rightAnchor != null)
+        {
+            HideRenderersInHierarchy(rightAnchor);
+            foundAny = true;
+        }
+
+        // Method 2: Find Building Block controller tracking GameObjects
+        GameObject leftBB = GameObject.Find("[BuildingBlock] Controller Tracking Left");
+        GameObject rightBB = GameObject.Find("[BuildingBlock] Controller Tracking Right");
+
+        if (leftBB != null)
+        {
+            HideRenderersInHierarchy(leftBB);
+            foundAny = true;
+        }
+
+        if (rightBB != null)
+        {
+            HideRenderersInHierarchy(rightBB);
+            foundAny = true;
+        }
+
+        // Method 3: Search for controller models by common name patterns
+        // This catches controller models that might be nested differently
+        Transform[] allTransforms = FindObjectsByType<Transform>(FindObjectsSortMode.None);
+        foreach (Transform t in allTransforms)
+        {
+            if (t == null) continue;
+            string name = t.name;
+            
+            // Look for controller model names (common patterns)
+            if (name.Contains("controller_model") || 
+                name.Contains("ControllerModel") ||
+                name.Contains("OVRControllerPrefab") ||
+                name.Contains("TouchControllerModel"))
+            {
+                HideRenderersInHierarchy(t.gameObject);
+                foundAny = true;
+            }
+        }
+
+        controllersHidden = true;
+        if (foundAny)
+        {
+            Debug.Log("[LoadoutManager] Controller models hidden to prevent overlap with equipped items.");
+        }
+        else
+        {
+            Debug.LogWarning("[LoadoutManager] No controller models found to hide. Controllers may use a different structure.");
+            Debug.LogWarning("[LoadoutManager] Searched for: LeftControllerAnchor, RightControllerAnchor, [BuildingBlock] Controller Tracking Left/Right");
+        }
+    }
+
+    /// <summary>
+    /// Hides renderers in controller hierarchy, skipping weapon objects (gun/flashlight).
+    /// Also disables GameObjects that look like controller models (for Building Block controllers).
+    /// </summary>
+    void HideRenderersInHierarchy(GameObject parent)
+    {
+        if (parent == null) return;
+
+        Renderer[] renderers = parent.GetComponentsInChildren<Renderer>(true);
+        int hiddenCount = 0;
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null) continue;
+
+            // Skip if this looks like a weapon (gun, flashlight) - we want these visible
+            if (IsWeaponRenderer(renderer.gameObject))
+            {
+                continue;
+            }
+
+            // Hide controller model renderers
+            if (renderer.enabled)
+            {
+                renderer.enabled = false;
+                hiddenCount++;
+            }
+        }
+
+        // Also disable GameObjects that look like controller models (for Building Block controllers)
+        // These might not use standard Renderer components
+        Transform[] children = parent.GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in children)
+        {
+            if (child == null || child == parent.transform) continue;
+
+            // Skip if this looks like a weapon
+            if (IsWeaponRenderer(child.gameObject))
+            {
+                continue;
+            }
+
+            string childName = child.name.ToLower();
+            // Check if this looks like a controller model GameObject
+            if ((childName.Contains("controller_model") || 
+                 childName.Contains("controllermodel") ||
+                 childName.Contains("ovrcontroller") ||
+                 childName.Contains("touchcontroller")) &&
+                child.gameObject.activeSelf)
+            {
+                child.gameObject.SetActive(false);
+                hiddenCount++;
+            }
+        }
+
+        if (hiddenCount > 0)
+        {
+            Debug.Log($"[LoadoutManager] Hidden {hiddenCount} renderer(s)/GameObject(s) in {parent.name} hierarchy");
+        }
+    }
+
+    /// <summary>
+    /// Checks if a GameObject is part of a weapon (gun/flashlight) hierarchy.
+    /// </summary>
+    bool IsWeaponRenderer(GameObject obj)
+    {
+        if (obj == null) return false;
+
+        // Check if this object or its parents contain weapon keywords
+        string name = obj.name.ToLower();
+
+        if (name.Contains("gun") ||
+            name.Contains("weapon") ||
+            name.Contains("flashlight") ||
+            name.Contains("revolver") ||
+            name.Contains("pistol"))
+        {
+            return true;
+        }
+
+        // Check parent hierarchy
+        Transform parent = obj.transform.parent;
+        while (parent != null)
+        {
+            string parentName = parent.name.ToLower();
+            if (parentName.Contains("gun") ||
+                parentName.Contains("weapon") ||
+                parentName.Contains("flashlight") ||
+                parentName.Contains("revolver") ||
+                parentName.Contains("pistol"))
+            {
+                return true;
+            }
+            parent = parent.parent;
+        }
+
+        return false;
     }
 }
