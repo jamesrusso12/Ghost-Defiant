@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using Meta.XR.MRUtilityKit;
@@ -32,8 +35,22 @@ public class SimpleRoomOccluder : MonoBehaviour
     [Header("Depth Writing Fix")]
     [Tooltip("Add depth-only renderer if passthrough shader doesn't support depth writing")]
     [SerializeField] private bool addDepthOnlyRenderer = true;
-    
+
+    [Header("Occlusion Fine-Tuning")]
+    [Tooltip("Depth bias to prevent z-fighting and environment peeking (0.0001-0.001 recommended)")]
+    [SerializeField] private float depthBias = 0.0005f;
+
+    [Tooltip("How often to verify mesh configuration is intact (seconds, 0 = disable)")]
+    [SerializeField] private float verificationInterval = 2f;
+
+    [Tooltip("Enable camera depth texture (required for proper occlusion)")]
+    [SerializeField] private bool ensureCameraDepthTexture = true;
+
     private OnScreenDebugDisplay debugDisplay;
+    private DestructibleMeshComponent currentMeshComponent;
+    private Dictionary<MeshRenderer, Material> configuredMaterials = new Dictionary<MeshRenderer, Material>();
+    private float lastVerificationTime;
+    private bool isConfigured = false;
 
     void Start()
     {
@@ -42,16 +59,20 @@ public class SimpleRoomOccluder : MonoBehaviour
         {
             SetupDebugDisplay();
         }
-        
+
         LogToDisplay("===== STARTING DEPTH OCCLUSION SETUP =====");
         Debug.Log("[SimpleRoomOccluder] ===== STARTING DEPTH OCCLUSION SETUP =====");
-        
-        // CRITICAL: Ensure cameras can see VirtualEnvironment layer
+
+        // CRITICAL: Ensure cameras can see VirtualEnvironment layer and have depth texture
         FixCameraCullingMasks();
-        
+        if (ensureCameraDepthTexture)
+        {
+            EnsureCameraDepthTexture();
+        }
+
         // CRITICAL: Ensure URP renderer includes VirtualEnvironment layer
         FixURPRendererLayerMasks();
-        
+
         if (configureOnStart && virtualEnvironmentParent != null)
         {
             ConfigureAllVirtualObjects();
@@ -61,13 +82,13 @@ public class SimpleRoomOccluder : MonoBehaviour
             LogToDisplay("ERROR: Virtual Environment Parent is NULL!", Color.red);
             Debug.LogError("[SimpleRoomOccluder] Virtual Environment Parent is NULL! Virtual objects will not be configured for occlusion.");
         }
-        
+
         if (meshSpawner != null)
         {
             meshSpawner.OnDestructibleMeshCreated.AddListener(OnRoomMeshCreated);
             LogToDisplay("✓ Subscribed to mesh creation event");
             Debug.Log("[SimpleRoomOccluder] ✓ Subscribed to OnDestructibleMeshCreated event");
-            
+
             // Also try to configure existing mesh if it already exists
             StartCoroutine(CheckForExistingMesh());
         }
@@ -76,9 +97,21 @@ public class SimpleRoomOccluder : MonoBehaviour
             LogToDisplay("ERROR: Mesh Spawner is NULL!", Color.red);
             Debug.LogError("[SimpleRoomOccluder] ✗ Mesh Spawner is NULL! Room mesh depth configuration will not work automatically. Assign it in Inspector!");
         }
-        
+
+        lastVerificationTime = Time.time;
+
         LogToDisplay("===== SETUP COMPLETE =====");
         Debug.Log("[SimpleRoomOccluder] ===== DEPTH OCCLUSION SETUP COMPLETE =====");
+    }
+
+    void Update()
+    {
+        // Periodic verification to ensure configuration hasn't been lost
+        if (verificationInterval > 0 && Time.time - lastVerificationTime >= verificationInterval)
+        {
+            lastVerificationTime = Time.time;
+            VerifyAndReapplyConfiguration();
+        }
     }
     
     private void SetupDebugDisplay()
@@ -106,16 +139,99 @@ public class SimpleRoomOccluder : MonoBehaviour
     }
     
     /// <summary>
+    /// Ensures all cameras have depth texture enabled for proper occlusion
+    /// </summary>
+    private void EnsureCameraDepthTexture()
+    {
+        Camera[] allCameras = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        int fixedCount = 0;
+
+        foreach (Camera cam in allCameras)
+        {
+            if (cam == null) continue;
+
+            if (cam.depthTextureMode == DepthTextureMode.None)
+            {
+                cam.depthTextureMode = DepthTextureMode.Depth;
+                fixedCount++;
+                Debug.Log($"[SimpleRoomOccluder] ✓ Enabled depth texture on camera: {cam.name}");
+            }
+            else if ((cam.depthTextureMode & DepthTextureMode.Depth) == 0)
+            {
+                cam.depthTextureMode |= DepthTextureMode.Depth;
+                fixedCount++;
+                Debug.Log($"[SimpleRoomOccluder] ✓ Added depth mode to camera: {cam.name}");
+            }
+        }
+
+        if (fixedCount > 0)
+        {
+            LogToDisplay($"✓ Enabled depth texture on {fixedCount} camera(s)", Color.green);
+        }
+    }
+
+    /// <summary>
+    /// Periodically verifies mesh configuration and re-applies if needed
+    /// </summary>
+    private void VerifyAndReapplyConfiguration()
+    {
+        if (!isConfigured || currentMeshComponent == null)
+        {
+            // Try to find mesh if we haven't configured yet
+            DestructibleMeshComponent meshComponent = FindFirstObjectByType<DestructibleMeshComponent>();
+            if (meshComponent != null && meshComponent != currentMeshComponent)
+            {
+                Debug.Log("[SimpleRoomOccluder] Found new mesh component during verification, configuring...");
+                OnRoomMeshCreated(meshComponent);
+            }
+            return;
+        }
+
+        // Verify configured materials are still applied
+        List<MeshRenderer> toReconfigure = new List<MeshRenderer>();
+
+        foreach (var kvp in configuredMaterials)
+        {
+            MeshRenderer renderer = kvp.Key;
+            Material configuredMat = kvp.Value;
+
+            if (renderer == null || configuredMat == null)
+            {
+                toReconfigure.Add(renderer);
+                continue;
+            }
+
+            // Check if material instance changed (mesh was regenerated or material reset)
+            if (renderer.sharedMaterial != configuredMat)
+            {
+                toReconfigure.Add(renderer);
+                if (debugMode)
+                {
+                    Debug.LogWarning($"[SimpleRoomOccluder] Material changed on {renderer.name}, will reconfigure");
+                }
+            }
+        }
+
+        // If any materials need reconfiguration, reconfigure the entire mesh
+        if (toReconfigure.Count > 0)
+        {
+            Debug.LogWarning($"[SimpleRoomOccluder] {toReconfigure.Count} segment(s) lost configuration, reconfiguring mesh...");
+            LogToDisplay($"⚠ Reconfiguring {toReconfigure.Count} segments", Color.yellow);
+            OnRoomMeshCreated(currentMeshComponent);
+        }
+    }
+
+    /// <summary>
     /// Checks for existing room mesh after a short delay (in case mesh was created before Start)
     /// </summary>
     private System.Collections.IEnumerator CheckForExistingMesh()
     {
         // Wait a frame to let everything initialize
         yield return null;
-        
+
         // Wait a bit more for mesh to potentially be created
         yield return new WaitForSeconds(0.5f);
-        
+
         DestructibleMeshComponent existingMesh = FindFirstObjectByType<DestructibleMeshComponent>();
         if (existingMesh != null)
         {
@@ -274,17 +390,23 @@ public class SimpleRoomOccluder : MonoBehaviour
             Debug.LogWarning("[SimpleRoomOccluder] OnRoomMeshCreated called with null component!");
             return;
         }
-        
+
+        // Store reference to current mesh component
+        currentMeshComponent = component;
+
+        // Clear previous material tracking
+        configuredMaterials.Clear();
+
         LogToDisplay("Room mesh created! Configuring...", Color.cyan);
         Debug.Log($"[SimpleRoomOccluder] OnRoomMeshCreated called! Configuring room mesh for depth occlusion...");
-        
+
         // Ensure room mesh writes to depth
-        System.Collections.Generic.List<GameObject> segments = new System.Collections.Generic.List<GameObject>();
+        List<GameObject> segments = new List<GameObject>();
         component.GetDestructibleMeshSegments(segments);
-        
+
         LogToDisplay($"Found {segments.Count} mesh segments");
         Debug.Log($"[SimpleRoomOccluder] Found {segments.Count} room mesh segments to configure");
-        
+
         int configuredCount = 0;
         int failedCount = 0;
         
@@ -313,12 +435,15 @@ public class SimpleRoomOccluder : MonoBehaviour
             
             // CRITICAL: Create a new material instance to avoid modifying shared material
             Material mat = renderer.material; // This creates an instance automatically
-            
+
+            // Track this material for verification
+            configuredMaterials[renderer] = mat;
+
             bool hasZWrite = mat.HasProperty("_ZWrite");
             bool hasSceneMeshZWrite = mat.HasProperty("_SceneMeshZWrite");
-            
+
             Debug.Log($"[SimpleRoomOccluder] Configuring {segment.name}: Shader={mat.shader.name}, HasZWrite={hasZWrite}, HasSceneMeshZWrite={hasSceneMeshZWrite}, CurrentQueue={mat.renderQueue}");
-            
+
             // Force depth writing - CRITICAL for occlusion
             if (hasZWrite)
             {
@@ -330,7 +455,7 @@ public class SimpleRoomOccluder : MonoBehaviour
             {
                 LogToDisplay($"WARNING: {segment.name} shader has no _ZWrite!", Color.yellow);
                 Debug.LogWarning($"[SimpleRoomOccluder]   Material {mat.name} (Shader: {mat.shader.name}) does NOT have _ZWrite property!");
-                
+
                 // If passthrough shader doesn't support depth writing, add a depth-only renderer
                 if (addDepthOnlyRenderer && mat.shader.name.Contains("Passthrough"))
                 {
@@ -338,7 +463,7 @@ public class SimpleRoomOccluder : MonoBehaviour
                     AddDepthOnlyRenderer(segment);
                 }
             }
-            
+
             // Also check for _SceneMeshZWrite property (used by some passthrough shaders)
             if (hasSceneMeshZWrite)
             {
@@ -346,7 +471,7 @@ public class SimpleRoomOccluder : MonoBehaviour
                 mat.SetFloat("_SceneMeshZWrite", 1f);
                 Debug.Log($"[SimpleRoomOccluder]   Set _SceneMeshZWrite: {oldSceneMeshZWrite} → 1");
             }
-            
+
             // Ensure proper depth testing
             if (mat.HasProperty("_ZTest"))
             {
@@ -354,7 +479,14 @@ public class SimpleRoomOccluder : MonoBehaviour
                 mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
                 Debug.Log($"[SimpleRoomOccluder]   Set _ZTest: {oldZTest} → LessEqual");
             }
-            
+
+            // CRITICAL: Add depth bias to prevent z-fighting and peeking
+            if (mat.HasProperty("_Offset") && depthBias > 0)
+            {
+                mat.SetFloat("_Offset", -depthBias);
+                Debug.Log($"[SimpleRoomOccluder]   Set _Offset: {-depthBias} (depth bias)");
+            }
+
             // Set render queue early so it renders BEFORE virtual objects
             // Geometry queue (2000-2499) renders before Transparent (2500+)
             int oldQueue = mat.renderQueue;
@@ -363,7 +495,7 @@ public class SimpleRoomOccluder : MonoBehaviour
                 mat.renderQueue = 2000; // Force into opaque geometry queue
                 Debug.Log($"[SimpleRoomOccluder]   Set RenderQueue: {oldQueue} → 2000");
             }
-            
+
             // Ensure material is not set to transparent blend mode (which disables depth write)
             if (mat.HasProperty("_Surface"))
             {
@@ -373,7 +505,7 @@ public class SimpleRoomOccluder : MonoBehaviour
                 mat.SetFloat("_Surface", 0f); // Force opaque for depth writing
                 Debug.Log($"[SimpleRoomOccluder]   Set _Surface: {oldSurface} → 0 (Opaque)");
             }
-            
+
             // Disable color mask if material is fully transparent (depth-only rendering)
             if (mat.HasProperty("_Color"))
             {
@@ -389,7 +521,7 @@ public class SimpleRoomOccluder : MonoBehaviour
                     }
                 }
             }
-            
+
             configuredCount++;
             
             if (debugMode || !hasZWrite)
@@ -407,6 +539,9 @@ public class SimpleRoomOccluder : MonoBehaviour
             LogToDisplay($"Config complete: {configuredCount} segments OK", Color.green);
         }
         Debug.Log($"[SimpleRoomOccluder] ✓ Room mesh configuration complete: {configuredCount} configured, {failedCount} failed");
+
+        // Mark as configured for verification
+        isConfigured = true;
     }
     
     /// <summary>
@@ -453,9 +588,13 @@ public class SimpleRoomOccluder : MonoBehaviour
         depthRenderer.material = depthMat;
         depthRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         depthRenderer.receiveShadows = false;
-        
-        // Hide the helper (it's only for depth writing)
-        depthHelper.hideFlags = HideFlags.DontSave;
+
+        // Track this depth renderer for verification
+        configuredMaterials[depthRenderer] = depthMat;
+
+        // Make it persistent but hidden in hierarchy (DontSave means it won't be in scene file)
+        // Remove DontSave to make it survive scene reloads if needed
+        depthHelper.hideFlags = HideFlags.HideInHierarchy;
         
         LogToDisplay($"✓ Added depth renderer to {segment.name}", Color.green);
         Debug.Log($"[SimpleRoomOccluder] ✓ Added depth-only renderer to {segment.name}");
@@ -505,16 +644,25 @@ public class SimpleRoomOccluder : MonoBehaviour
         {
             depthMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
         }
-        
+
+        // Apply depth bias using polygon offset to prevent z-fighting
+        if (depthBias > 0)
+        {
+            // Negative factor pushes depth away from camera (renders "behind")
+            // This prevents virtual objects from poking through
+            depthMat.SetFloat("unity_PolygonOffsetFactor", -1f);
+            depthMat.SetFloat("unity_PolygonOffsetUnits", -depthBias * 10000f);
+        }
+
         // Set to render early in geometry queue (before virtual objects)
-        depthMat.renderQueue = 2000; // Opaque geometry queue
-        
+        depthMat.renderQueue = 1999; // Just before standard opaque geometry
+
         // Disable color writing (depth only)
         if (depthMat.HasProperty("_ColorMask"))
         {
             depthMat.SetInt("_ColorMask", 0); // No color channels
         }
-        
+
         return depthMat;
     }
     
@@ -651,7 +799,7 @@ public class SimpleRoomOccluder : MonoBehaviour
             
             // CRITICAL: Create material instance to avoid modifying shared materials
             Material mat = renderer.material; // This creates an instance automatically
-            
+
             // Ensure depth testing - virtual objects should be hidden when behind room mesh
             if (mat.HasProperty("_ZTest"))
             {
@@ -659,33 +807,48 @@ public class SimpleRoomOccluder : MonoBehaviour
                 // This ensures objects behind the room mesh are hidden
                 mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
             }
-            
-            // Virtual objects should also write depth for proper sorting
-            if (mat.HasProperty("_ZWrite"))
-            {
-                mat.SetFloat("_ZWrite", 1f);
-            }
-            
-            // CRITICAL: Set render queue to render AFTER room mesh
-            // Room mesh renders at 2000 (opaque geometry), virtual objects should render after
-            if (mat.renderQueue < 2500)
-            {
-                mat.renderQueue = 2500; // Render after room mesh (which renders at ~2000)
-            }
-            
-            // Ensure material respects depth buffer
+
+            // CRITICAL FIX: Determine if material is opaque or transparent
+            bool isTransparent = false;
             if (mat.HasProperty("_Surface"))
             {
-                // If material is transparent, ensure it still tests depth
                 float surfaceType = mat.GetFloat("_Surface");
-                if (surfaceType > 0.5f) // Transparent
+                isTransparent = surfaceType > 0.5f; // 1 = Transparent
+            }
+            else if (mat.renderQueue >= 3000)
+            {
+                // Queue 3000+ is typically transparent/alpha tested
+                isTransparent = true;
+            }
+
+            // Virtual objects should write depth if opaque (for proper sorting)
+            if (mat.HasProperty("_ZWrite"))
+            {
+                if (!isTransparent)
                 {
-                    // Transparent materials can still test depth, but may not write it
-                    // Force depth testing to be enabled
-                    if (mat.HasProperty("_ZTest"))
-                    {
-                        mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
-                    }
+                    mat.SetFloat("_ZWrite", 1f); // Opaque objects write depth
+                }
+                // Transparent objects typically don't write depth
+            }
+
+            // CRITICAL FIX: Set render queue based on material type
+            // Room mesh renders at 2000 (opaque geometry)
+            // We want virtual objects to render AFTER room mesh but maintain their transparency
+            if (isTransparent)
+            {
+                // Transparent objects stay in transparent queue (3000+) but after room mesh
+                if (mat.renderQueue < 3000)
+                {
+                    mat.renderQueue = 3000; // Standard transparent queue
+                }
+            }
+            else
+            {
+                // Opaque objects should render AFTER room mesh (2000) but before transparent (3000)
+                // Use queue 2450 to ensure they render after room mesh but before transparent objects
+                if (mat.renderQueue < 2450)
+                {
+                    mat.renderQueue = 2450; // After room mesh, before transparent
                 }
             }
             

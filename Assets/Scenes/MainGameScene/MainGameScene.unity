@@ -11742,6 +11742,37 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.6778891, y: -3.017043, z: -1.9610169}
     m_Extent: {x: 3.368389, y: 4.314377, z: 5.282364}
   m_DirtyAABB: 0
+--- !u!1 &822772991
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 822772992}
+  m_Layer: 0
+  m_Name: AmbientMusic
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &822772992
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 822772991}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.0046, y: 0.20442, z: -0.24479}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &823223937
 GameObject:
   m_ObjectHideFlags: 0
@@ -38785,19 +38816,20 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 18842689}
   - {fileID: 1558897995}
+  - {fileID: 1936890170}
+  - {fileID: 1707601661}
+  - {fileID: 829405811}
+  - {fileID: 1525452318}
   - {fileID: 773190231}
   - {fileID: 116090885}
   - {fileID: 1248913997}
-  - {fileID: 1525452318}
   - {fileID: 1293433509}
   - {fileID: 1528710844}
   - {fileID: 922166766}
   - {fileID: 2068156299}
-  - {fileID: 1936890170}
-  - {fileID: 1707601661}
-  - {fileID: 829405811}
   - {fileID: 1964602099}
   - {fileID: 1613312600}
   - {fileID: 410873044}
   - {fileID: 1713535258}
   - {fileID: 269540712}
+  - {fileID: 822772992}

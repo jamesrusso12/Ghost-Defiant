@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Project Path="Unity.RenderPipelines.Universal.Runtime.csproj" />
+  <Project Path="FlatKit.Utils.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="ExternAttributes.Editor.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+</Solution>
