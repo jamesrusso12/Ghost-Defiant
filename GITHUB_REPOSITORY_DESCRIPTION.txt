@@ -1,2 +1,5 @@
-🎮 Mixed reality wave-based survival shooter for Meta Quest | Ghost-themed horror game with passthrough, room occlusion, and spatial mapping | Built with Unity & Meta XR SDK
+Ghost Defiant is a mixed reality ghost-hunting shooter built for Meta Quest that turns your real room into the battlefield. You can play from anywhere, because the game uses spatial mapping to understand your space and then brings the action to you, not the other way around.
 
+Armed with responsive, satisfying gunplay, you track and eliminate ghosts that feel smart and alive. The enemy AI is designed to mess with you: ghosts actively hide when you look their way, forcing you to scan corners, check your blind spots, and move with intent instead of just standing still and aiming.
+
+Built with Meta Building Blocks and inspired by Valem MR tutorials plus Meta’s First Encounters, the game leans hard into presence and immersion. Room occlusion makes ghosts and effects properly interact with your environment, while spatial mapping drives a destructible global mesh so the world can react when the fight gets intense. The result is a fast, re-playable MR shooter where your space becomes the level and the ghosts learn how to survive in it.
