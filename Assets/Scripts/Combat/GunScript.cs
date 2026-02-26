@@ -45,6 +45,15 @@ public class GunScript : MonoBehaviour
     public UnityEvent OnShoot;
     public UnityEvent<GameObject> OnShootAndHit;
     public UnityEvent OnShootAndMiss;
+
+    /// <summary>World position of the last projectile impact (set by projectile before OnShootAndHit). Used for accurate 3D destroy sound.</summary>
+    public Vector3 LastImpactPosition { get; private set; }
+
+    /// <summary>Call before invoking OnShootAndHit when impact position is known (e.g. from projectile).</summary>
+    public void SetLastImpactPosition(Vector3 worldPosition)
+    {
+        LastImpactPosition = worldPosition;
+    }
     
     [Header("Debug")]
     [Tooltip("Enable verbose debug logging (disable for better performance) - KEEP THIS OFF IN BUILDS!")]
@@ -461,6 +470,7 @@ public class ProjectileController : MonoBehaviour
         if (gunScript != null)
         {
             if (debugLogging) Debug.Log($"[ProjectileController] Invoking OnShootAndHit for: {hitObject.name}");
+            gunScript.SetLastImpactPosition(impactPosition);
             gunScript.OnShootAndHit.Invoke(hitObject);
         }
         else

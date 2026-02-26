@@ -209,7 +209,12 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
         // Compute hit position for accurate 3D audio (before we destroy the segment)
         Vector3 hitPosition = segment.transform.position;
         Vector3 hitNormal = Vector3.up;
-        if (gunScript != null && gunScript.shootingPoint != null)
+        // Prefer projectile impact position when in projectile mode (set by ProjectileController just before this call)
+        if (gunScript != null && gunScript.delayWallDestruction && gunScript.LastImpactPosition != Vector3.zero)
+        {
+            hitPosition = gunScript.LastImpactPosition;
+        }
+        else if (gunScript != null && gunScript.shootingPoint != null)
         {
             Ray ray = new Ray(gunScript.shootingPoint.position, gunScript.shootingPoint.forward);
             if (Physics.Raycast(ray, out RaycastHit hit, gunScript.maxLineDistance, gunScript.layerMask))
@@ -269,21 +274,27 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
 
     private void PlayDestroySoundOneShot(AudioClip clip, Vector3 position, float volume, float pitch)
     {
+        // Create one-shot in world space only (no parent) so position is definitely the wall hit, not the player
         GameObject oneShot = new GameObject("DestructibleMesh_DestroyOneShot");
+        oneShot.transform.SetParent(null);
         oneShot.transform.position = position;
+
         AudioSource source = oneShot.AddComponent<AudioSource>();
         source.clip = clip;
         source.volume = volume;
         source.pitch = pitch;
         source.playOnAwake = false;
 
-        // Full 3D spatial so direction matches the hit location
+        // Full 3D so sound comes from the wall position
         source.spatialBlend = 1f;
         source.dopplerLevel = 0f;
-        source.spread = 0f;           // Point source = clear left/right/front/behind
+        source.spread = 0f;
         source.rolloffMode = AudioRolloffMode.Logarithmic;
         source.minDistance = 1f;
         source.maxDistance = 20f;
+
+        // Use Meta XR Audio spatializer for proper directional/HRTF when available
+        source.spatialize = true;
 
         source.Play();
         Destroy(oneShot, clip.length > 0f ? clip.length + 0.1f : 2f);

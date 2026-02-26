@@ -18447,7 +18447,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 57a4fee8c324b1c4ea10d4549acb12f9, type: 3}
   destroySoundPitchMin: 0.88
   destroySoundPitchMax: 1.12
-  destroySoundVolume: 0.6
+  destroySoundVolume: 0.45
   debrisLargePrefab: {fileID: 6033790609030183506, guid: 279b7601e1bac9c4aa9317519988c475,
     type: 3}
   debrisMediumPrefab: {fileID: 5229245224361292427, guid: 0e4bd526484727f458a42231b93b91fe,
@@ -21676,7 +21676,7 @@ PrefabInstance:
     - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
         type: 3}
       propertyPath: shootingVolume
-      value: 0.6
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
         type: 3}
