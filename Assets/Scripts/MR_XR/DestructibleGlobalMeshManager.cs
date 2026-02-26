@@ -19,7 +19,16 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
     public DestructibleGlobalMeshSpawner meshSpawner;
 
     [Header("Audio")]
+    [Tooltip("Single clip (used if no variants assigned). Kept for backward compatibility.")]
     public AudioClip destroySound;
+    [Tooltip("Optional: multiple variants for more natural sound when many walls break. If set, a random variant is chosen each time.")]
+    public AudioClip[] destroySoundVariants;
+    [Tooltip("Pitch variation so simultaneous destructions don't sound identical.")]
+    [SerializeField] private float destroySoundPitchMin = 0.88f;
+    [SerializeField] private float destroySoundPitchMax = 1.12f;
+    [Tooltip("Master volume for wall destroy sounds (slider).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float destroySoundVolume = 0.6f;
 
     [Header("Debris Prefabs")]
     public GameObject debrisLargePrefab;
@@ -46,6 +55,9 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
     
     // OPTIMIZATION: Dictionary for O(1) segment lookup instead of O(n) linear search
     private Dictionary<GameObject, GameObject> segmentLookup = new Dictionary<GameObject, GameObject>();
+
+    // Used to pass hit position into HandleSegmentDestroyed (same frame) for accurate 3D audio
+    private Vector3 lastDestroyHitPosition;
 
     void Awake()
     {
@@ -194,13 +206,9 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
             return;
         }
 
-        currentComponent.DestroySegment(segmentToDestroy);
-        onSegmentDestroyed.Invoke(segmentToDestroy);
-
-        // Simple Hit Calculation
+        // Compute hit position for accurate 3D audio (before we destroy the segment)
         Vector3 hitPosition = segment.transform.position;
         Vector3 hitNormal = Vector3.up;
-
         if (gunScript != null && gunScript.shootingPoint != null)
         {
             Ray ray = new Ray(gunScript.shootingPoint.position, gunScript.shootingPoint.forward);
@@ -214,9 +222,13 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
                 else
                 {
                     hitNormal = (hitPosition - gunScript.shootingPoint.position).normalized;
-        }
+                }
             }
         }
+        lastDestroyHitPosition = hitPosition;
+
+        currentComponent.DestroySegment(segmentToDestroy);
+        onSegmentDestroyed.Invoke(segmentToDestroy);
 
         // DEBRIS DISABLED - Taking a break from debris functionality
         // InstantiateDebris(hitPosition, hitNormal);
@@ -234,10 +246,47 @@ public class DestructibleGlobalMeshManager : MonoBehaviour
 
     private void HandleSegmentDestroyed(GameObject destroyedSegment)
     {
-        if (destroySound != null && destroyedSegment != null)
+        AudioClip clip = ChooseDestroyClip();
+        if (clip == null || destroyedSegment == null) return;
+
+        // Use actual hit position for correct directional 3D audio (set in DestroyMeshSegment same frame)
+        Vector3 pos = lastDestroyHitPosition;
+        float volume = destroySoundVolume * UnityEngine.Random.Range(0.92f, 1f);
+        float pitch = UnityEngine.Random.Range(destroySoundPitchMin, destroySoundPitchMax);
+
+        PlayDestroySoundOneShot(clip, pos, volume, pitch);
+    }
+
+    private AudioClip ChooseDestroyClip()
+    {
+        if (destroySoundVariants != null && destroySoundVariants.Length > 0)
         {
-            AudioSource.PlayClipAtPoint(destroySound, destroyedSegment.transform.position, UnityEngine.Random.Range(0.8f, 1.2f));
+            AudioClip chosen = destroySoundVariants[UnityEngine.Random.Range(0, destroySoundVariants.Length)];
+            if (chosen != null) return chosen;
         }
+        return destroySound;
+    }
+
+    private void PlayDestroySoundOneShot(AudioClip clip, Vector3 position, float volume, float pitch)
+    {
+        GameObject oneShot = new GameObject("DestructibleMesh_DestroyOneShot");
+        oneShot.transform.position = position;
+        AudioSource source = oneShot.AddComponent<AudioSource>();
+        source.clip = clip;
+        source.volume = volume;
+        source.pitch = pitch;
+        source.playOnAwake = false;
+
+        // Full 3D spatial so direction matches the hit location
+        source.spatialBlend = 1f;
+        source.dopplerLevel = 0f;
+        source.spread = 0f;           // Point source = clear left/right/front/behind
+        source.rolloffMode = AudioRolloffMode.Logarithmic;
+        source.minDistance = 1f;
+        source.maxDistance = 20f;
+
+        source.Play();
+        Destroy(oneShot, clip.length > 0f ? clip.length + 0.1f : 2f);
     }
 
     // =================================================================

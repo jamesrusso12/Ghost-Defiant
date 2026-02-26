@@ -18441,6 +18441,13 @@ MonoBehaviour:
   gunScript: {fileID: 1516424884}
   meshSpawner: {fileID: 1293433511}
   destroySound: {fileID: 8300000, guid: ec0a6bfc7d40c9344bf024f21d70b88b, type: 3}
+  destroySoundVariants:
+  - {fileID: 8300000, guid: b0538302bf7b31840b187a8f52ce9153, type: 3}
+  - {fileID: 8300000, guid: 6be5afd1fe143da49903da869a87e599, type: 3}
+  - {fileID: 8300000, guid: 57a4fee8c324b1c4ea10d4549acb12f9, type: 3}
+  destroySoundPitchMin: 0.88
+  destroySoundPitchMax: 1.12
+  destroySoundVolume: 0.6
   debrisLargePrefab: {fileID: 6033790609030183506, guid: 279b7601e1bac9c4aa9317519988c475,
     type: 3}
   debrisMediumPrefab: {fileID: 5229245224361292427, guid: 0e4bd526484727f458a42231b93b91fe,
@@ -21668,13 +21675,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
         type: 3}
+      propertyPath: shootingVolume
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
+        type: 3}
       propertyPath: projectileSpeed
       value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
         type: 3}
       propertyPath: layerMask.m_Bits
-      value: 0
+      value: 2048
       objectReference: {fileID: 0}
     - target: {fileID: 3674657481516381753, guid: 08cc3401f9867bd4aaf4307faf46963c,
         type: 3}
@@ -21885,6 +21897,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalPosition.z
       value: 0.0975
+      objectReference: {fileID: 0}
+    - target: {fileID: 8780254710059584515, guid: 08cc3401f9867bd4aaf4307faf46963c,
+        type: 3}
+      propertyPath: m_Volume
+      value: 0.37
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:

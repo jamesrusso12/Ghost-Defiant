@@ -37,6 +37,9 @@ public class GunScript : MonoBehaviour
     [Header("Audio")]
     public AudioSource source;
     public AudioClip shootingAudioClip;
+    [Tooltip("Volume of the shooting sound (lower to reduce clash with impact/debris).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float shootingVolume = 0.7f;
 
     [Header("Events")]
     public UnityEvent OnShoot;
@@ -96,7 +99,7 @@ public class GunScript : MonoBehaviour
 
         if (source != null && shootingAudioClip != null)
         {
-            source.PlayOneShot(shootingAudioClip);
+            source.PlayOneShot(shootingAudioClip, shootingVolume);
         }
 
         if (shootingPoint == null)

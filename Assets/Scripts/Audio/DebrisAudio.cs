@@ -5,6 +5,9 @@ using UnityEngine.Events;
 public class DebrisAudio : MonoBehaviour
 {
     [SerializeField] private AudioClip collisionSound;
+    [Tooltip("Volume of debris collision (lower to avoid clashing with gun and wall destruction).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float volume = 0.55f;
     [SerializeField] private float minPitch = 0.8f;
     [SerializeField] private float maxPitch = 1.2f;
     [SerializeField] private UnityEvent onCollisionTriggered;
@@ -22,7 +25,7 @@ public class DebrisAudio : MonoBehaviour
         if (collisionSound != null)
         {
             _audioSource.pitch = Random.Range(minPitch, maxPitch);
-            _audioSource.PlayOneShot(collisionSound);
+            _audioSource.PlayOneShot(collisionSound, volume);
         }
         
         onCollisionTriggered?.Invoke();
